@@ -33,6 +33,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+        env:
+          # Antler runs models on the CPU outside Windows, so skip
+          # onnxruntime's NVIDIA CUDA/TensorRT download on Linux.
+          ONNXRUNTIME_NODE_INSTALL: skip
       - name: Build installer
         run: node scripts/build.js --no-anim
         env:

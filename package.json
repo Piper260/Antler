@@ -53,6 +53,7 @@
     "winston": "^3.11.0"
   },
   "devDependencies": {
+    "7zip-bin": "^5.2.0",
     "cross-env": "^7.0.3",
     "electron": "44.10.0",
     "electron-builder": "26.17.0",
@@ -177,7 +178,9 @@
         "!**/*.test.js",
         "!node_modules/onnxruntime-node/bin/napi-v6/win32/**",
         "!node_modules/onnxruntime-node/bin/napi-v6/darwin/**",
-        "!node_modules/onnxruntime-node/bin/napi-v6/linux/arm64/**"
+        "!node_modules/onnxruntime-node/bin/napi-v6/linux/arm64/**",
+        "!node_modules/onnxruntime-node/bin/napi-v6/linux/x64/libonnxruntime_providers_cuda.so",
+        "!node_modules/onnxruntime-node/bin/napi-v6/linux/x64/libonnxruntime_providers_tensorrt.so"
       ]
     },
     "nsis": {

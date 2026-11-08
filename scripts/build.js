@@ -117,12 +117,20 @@ async function findRunningInstances() {
       return []; // tasklist failing shouldn't block the build
     }
   }
+  // Match the app's exact process name only. A looser match (pgrep -f) also
+  // finds any shell whose command line or folder mentions "Antler", this
+  // build included.
   try {
-    const { stdout } = await execAsync(`pgrep -f "${PRODUCT_NAME}"`);
-    return stdout.trim().split(/\r?\n/).filter(Boolean);
+    const { stdout } = await execAsync(`pgrep -x "${processName()}"`);
+    return stdout.trim().split(/\r?\n/).filter((pid) => pid && Number(pid) !== process.pid);
   } catch {
     return []; // pgrep exits non-zero when nothing matches
   }
+}
+
+/** The packaged app's process name on macOS and Linux. */
+function processName() {
+  return process.platform === 'linux' ? (PACKAGE.build.linux?.executableName || PRODUCT_NAME) : PRODUCT_NAME;
 }
 
 /**
@@ -132,7 +140,7 @@ async function findRunningInstances() {
 async function closeRunningInstances(update) {
   update(`asking ${PRODUCT_NAME} to close`);
   if (process.platform === 'win32') await execAsync(`taskkill /IM "${PRODUCT_EXE}" /T`).catch(() => {});
-  else await execAsync(`pkill -TERM -f "${PRODUCT_NAME}"`).catch(() => {});
+  else await execAsync(`pkill -TERM -x "${processName()}"`).catch(() => {});
   await sleep(1500);
 
   let remaining = await findRunningInstances();

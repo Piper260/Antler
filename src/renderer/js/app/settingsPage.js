@@ -102,7 +102,16 @@ class AppSettingsPage {
       }
       
       if (hfTokenInput) hfTokenInput.value = settings.huggingface?.apiToken || '';
-      if (hfModelSelect) hfModelSelect.value = settings.huggingface?.preferredModel || 'Qwen/Qwen2.5-72B-Instruct';
+      if (hfModelSelect) {
+        // The list and the current choice come from the AI service, which
+        // swaps a withdrawn model for the default.
+        const info = await window.electronAPI.ai.getModels().catch(() => null);
+        const models = info?.models || {};
+        hfModelSelect.innerHTML = Object.entries(models)
+          .map(([id, m]) => `<option value="${id}">${m.name}${m.note ? ` (${m.note})` : ''}</option>`)
+          .join('');
+        hfModelSelect.value = info?.preferred || Object.keys(models)[0] || '';
+      }
 
       // Populate custom models into the select and list
       this._loadCustomModelsUI(settings.huggingface?.customModels || [], settings.huggingface?.preferredModel);
@@ -281,7 +290,7 @@ class AppSettingsPage {
     const e621ApiKey = document.getElementById('e621-api-key')?.value.trim() || '';
     const aiEnabled = document.getElementById('ai-enable-checkbox')?.checked || false;
     const aiToken = document.getElementById('hf-api-token')?.value.trim() || '';
-    const aiModel = document.getElementById('hf-model-select')?.value || 'Qwen/Qwen2.5-72B-Instruct';
+    const aiModel = document.getElementById('hf-model-select')?.value || 'Qwen/Qwen3.8-27B';
     const aiTemp = parseFloat(document.getElementById('ai-temperature-slider')?.value) || 0.7;
     const aiCustomModels = this._getCustomModelsFromUI();
     
@@ -638,7 +647,7 @@ class AppSettingsPage {
         huggingface: {
           apiToken: token,
           enableAI: true,
-          preferredModel: modelSelect?.value || 'Qwen/Qwen2.5-72B-Instruct'
+          preferredModel: modelSelect?.value || 'Qwen/Qwen3.8-27B'
         }
       };
       
@@ -688,7 +697,7 @@ class AppSettingsPage {
       huggingface: {
         apiToken: tokenInput?.value.trim() || '',
         enableAI: enableCheckbox?.checked || false,
-        preferredModel: modelSelect?.value || 'Qwen/Qwen2.5-72B-Instruct',
+        preferredModel: modelSelect?.value || 'Qwen/Qwen3.8-27B',
         temperature: parseFloat(tempSlider?.value) || 0.7,
         customModels: this._getCustomModelsFromUI()
       }
@@ -763,8 +772,9 @@ class AppSettingsPage {
       this._addCustomModelToUI(modelId, select, list);
     }
 
-    // Restore selection after re-populating
-    if (selectedModel) select.value = selectedModel;
+    // Restore selection after re-populating, unless that model is no longer
+    // offered (the AI service has already picked its replacement).
+    if (selectedModel && select.querySelector(`option[value="${CSS.escape(selectedModel)}"]`)) select.value = selectedModel;
   }
 
   /**

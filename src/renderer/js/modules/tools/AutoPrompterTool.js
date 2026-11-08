@@ -137,6 +137,17 @@ standing, looking at viewer"></textarea>
             <input type="checkbox" id="ap-nsfw-check" checked>
             <span>NSFW</span>
           </label>
+
+          <!-- Which base model the prompt is for -->
+          <label class="ap-preset-label" title="The base model the prompt is written for">
+            <span>For</span>
+            <select id="ap-preset-select" class="form-select ap-preset-select" aria-label="Prompt style"></select>
+          </label>
+
+          <!-- Prompts saved earlier -->
+          <select id="ap-saved-select" class="form-select ap-saved-select" aria-label="Saved prompts">
+            <option value="">Saved prompts</option>
+          </select>
         </div>
 
         <!-- Inline AI Edit Popover (fixed, appended to body in initialize) -->
@@ -158,6 +169,12 @@ standing, looking at viewer"></textarea>
           <div class="ap-out-section">
             <div class="ap-out-header">
               <span class="ap-out-label">Prompt</span>
+              <button class="btn btn-sm ap-copy-btn" id="ap-delete-saved" hidden title="Delete this saved prompt">
+                <i class="fas fa-trash"></i> Delete
+              </button>
+              <button class="btn btn-sm ap-copy-btn" id="ap-save-prompt" title="Keep this prompt to reuse later">
+                <i class="fas fa-bookmark"></i> Save
+              </button>
               <button class="btn btn-sm ap-copy-btn" id="ap-copy-prompt">
                 <i class="fas fa-copy"></i> Copy
               </button>
@@ -276,6 +293,10 @@ standing, looking at viewer"></textarea>
     if (nsfwCheck) {
       nsfwCheck.addEventListener('change', (e) => { this._nsfw = e.target.checked; });
     }
+
+    // Prompt style and saved prompts
+    this._setupPresets();
+    this._setupSavedPrompts();
 
     // Load custom prompt
     const customLoad = this.container.querySelector('#ap-custom-load');
@@ -715,12 +736,8 @@ UNIVERSAL RULES (override nothing above, apply to all operations):
   }
 
   _modelShortName(modelId) {
-    const names = {
-      'Qwen/Qwen2.5-72B-Instruct': 'Qwen 2.5 72B',
-      'meta-llama/Llama-3.3-70B-Instruct': 'Llama 3.3 70B',
-      'mistralai/Mistral-Nemo-Instruct-2407': 'Mistral Nemo 12B',
-    };
-    return names[modelId] || (modelId ? modelId.split('/').pop() : 'Default Model');
+    // Names come from the AI service's model list (see _checkAIStatus).
+    return this._modelNames?.[modelId]?.name || (modelId ? modelId.split('/').pop() : 'Default Model');
   }
 
   async _checkAIStatus() {
@@ -768,8 +785,9 @@ UNIVERSAL RULES (override nothing above, apply to all operations):
     } else {
       // Show HF badge
       if (badge && window.electronAPI?.settings?.get) {
-        const saved   = await window.electronAPI.settings.get('huggingface.preferredModel');
-        const modelId = saved?.value || 'Qwen/Qwen2.5-72B-Instruct';
+        const info    = await window.electronAPI.ai.getModels().catch(() => null);
+        this._modelNames = info?.models || {};
+        const modelId = info?.preferred || info?.defaultModel || '';
         this._hfModel             = modelId;
         badge.textContent         = this._modelShortName(modelId);
         badge.dataset.modelId     = modelId;
@@ -992,13 +1010,15 @@ UNIVERSAL RULES (override nothing above, apply to all operations):
         tagsByCategory,
         provider,
         nsfw: this._nsfw,
+        preset: this._preset,
         ...(model ? { model } : {})
       });
 
       if (!result.success) throw new Error(result.message || 'AI failed');
 
       const prompt   = this._normalizeAIOutput(result.optimizedPrompt);
-      const negative = result.negativePrompt?.trim() || this._buildNegativePrompt(categories);
+      // Natural-language presets (Flux) don't use a negative prompt.
+      const negative = result.negativePrompt?.trim() || (this._presetStyle === 'prose' ? '' : this._buildNegativePrompt(categories));
       this._setOutput(prompt, negative);
       this.generatedPrompt = prompt;
 
@@ -1219,6 +1239,89 @@ UNIVERSAL RULES (override nothing above, apply to all operations):
     if (isNude) ctx.push('clothed', 'clothing');
 
     return [...base, ...ctx].join(', ');
+  }
+
+  // ─── Prompt style (preset) ────────────────────────────────────────────────
+
+  /** Fills the "For" menu from the AI service's presets and restores the last choice. */
+  async _setupPresets() {
+    const select = this.container.querySelector('#ap-preset-select');
+    if (!select) return;
+    let saved = '';
+    try { saved = localStorage.getItem('antler:prompter:preset') || ''; } catch { /* not remembered */ }
+    const info = await window.electronAPI.ai.getModels().catch(() => null);
+    const presets = info?.presets?.length ? info.presets : [{ id: 'illustrious', name: 'Illustrious / NoobAI', style: 'tags' }];
+    select.innerHTML = presets.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    select.value = presets.some(p => p.id === saved) ? saved : presets[0].id;
+    const apply = () => {
+      this._preset = select.value;
+      this._presetStyle = presets.find(p => p.id === select.value)?.style || 'tags';
+      try { localStorage.setItem('antler:prompter:preset', select.value); } catch { /* not remembered */ }
+    };
+    select.addEventListener('change', apply);
+    apply();
+  }
+
+  // ─── Saved prompts ────────────────────────────────────────────────────────
+
+  _setupSavedPrompts() {
+    const select = this.container.querySelector('#ap-saved-select');
+    const saveBtn = this.container.querySelector('#ap-save-prompt');
+    const deleteBtn = this.container.querySelector('#ap-delete-saved');
+    if (!select || !window.electronAPI?.prompts) return;
+
+    saveBtn?.addEventListener('click', () => this._savePrompt());
+    deleteBtn?.addEventListener('click', () => this._deleteSavedPrompt());
+    select.addEventListener('change', () => {
+      const item = this._savedPrompts?.find(p => p.id === select.value);
+      if (!item) return;
+      this._setOutput(item.prompt, item.negative || '');
+      this.container.querySelector('#ap-output').style.display = '';
+      this._loadedSavedId = item.id;
+      if (deleteBtn) deleteBtn.hidden = false;
+      select.value = '';
+    });
+    this._refreshSavedPrompts();
+  }
+
+  async _refreshSavedPrompts(prompts) {
+    const select = this.container.querySelector('#ap-saved-select');
+    if (!select) return;
+    if (!prompts) {
+      const result = await window.electronAPI.prompts.list().catch(() => null);
+      prompts = result?.prompts || [];
+    }
+    this._savedPrompts = prompts;
+    const esc = (t) => String(t).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    select.innerHTML = `<option value="">Saved prompts (${prompts.length})</option>` +
+      prompts.map(p => `<option value="${esc(p.id)}">${esc(p.name)}${p.preset ? ` · ${esc(p.preset)}` : ''}</option>`).join('');
+    select.disabled = prompts.length === 0;
+  }
+
+  async _savePrompt() {
+    const prompt = this.container.querySelector('#ap-prompt-out')?.value.trim();
+    if (!prompt) { this.showToast('Generate a prompt first', 'warning'); return; }
+    const id = this.currentPostData?.id;
+    const result = await window.electronAPI.prompts.save({
+      name: id ? `Post ${id}` : 'Custom tags',
+      prompt,
+      negative: this.container.querySelector('#ap-negative-out')?.value || '',
+      preset: this._preset || '',
+      source: id ? `https://e621.net/posts/${id}` : ''
+    });
+    if (!result?.success) { this.showToast(result?.message || 'Could not save the prompt', 'error'); return; }
+    await this._refreshSavedPrompts(result.prompts);
+    this.showToast('Prompt saved', 'success');
+  }
+
+  async _deleteSavedPrompt() {
+    if (!this._loadedSavedId) return;
+    const result = await window.electronAPI.prompts.remove(this._loadedSavedId);
+    this._loadedSavedId = null;
+    const deleteBtn = this.container.querySelector('#ap-delete-saved');
+    if (deleteBtn) deleteBtn.hidden = true;
+    await this._refreshSavedPrompts(result?.prompts);
+    this.showToast('Saved prompt deleted', 'success');
   }
 
   // ─── Output helpers ───────────────────────────────────────────────────────

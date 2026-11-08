@@ -1,4 +1,5 @@
 // src/main/ipc/AIHandlers.js - IPC handlers for AI operations
+const { list: listPresets } = require('../../shared/promptPresets');
 const { ipcMain } = require('electron');
 
 class AIHandlers {
@@ -132,7 +133,11 @@ class AIHandlers {
       try {
         return {
           success: true,
-          models: this.aiService.getAvailableModels()
+          models: this.aiService.getAvailableModels(),
+          // The model to use now: the saved choice, or the default when it was withdrawn.
+          preferred: this.aiService.getPreferredModel(),
+          defaultModel: this.aiService.getDefaultModel(),
+          presets: listPresets()
         };
       } catch (error) {
         console.error('❌ Error getting models:', error);

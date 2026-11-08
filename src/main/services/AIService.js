@@ -1,5 +1,17 @@
 // src/main/services/AIService.js - AI integration service (Hugging Face + Ollama)
+const { getPreset, qualityLine } = require('../../shared/promptPresets');
 
+// Hugging Face models offered in Settings and the prompt tools, best first.
+// All are on Hugging Face's inference router (checked 2026-11-08). A saved
+// choice that has since been withdrawn falls back to the first.
+const HF_MODELS = {
+  'Qwen/Qwen3.8-27B': { name: 'Qwen 3.8 27B', note: 'fast, recommended' },
+  'deepseek-ai/DeepSeek-V3.2': { name: 'DeepSeek V3.2', note: 'strong, slower' },
+  'google/gemma-4-31B-it': { name: 'Gemma 4 31B', note: 'balanced' },
+  'meta-llama/Llama-3.3-70B-Instruct': { name: 'Llama 3.3 70B', note: 'older, reliable' },
+  'openai/gpt-oss-120b': { name: 'gpt-oss 120B', note: 'fast on Groq or Cerebras' }
+};
+const DEFAULT_HF_MODEL = Object.keys(HF_MODELS)[0];
 
 // Sentinel markers wrapping the structured prompt output. Used both as a
 // stop sequence (so generation truncates right after the closing marker
@@ -13,12 +25,7 @@ class AIService {
     this.settingsService = settingsService;
     this.hfBaseURL = 'https://router.huggingface.co/v1/chat/completions';
 
-    // Available HuggingFace models (all free tier compatible)
-    this.availableModels = {
-      'Qwen/Qwen2.5-72B-Instruct': { name: 'Qwen 2.5 72B', speed: 'fast', quality: 'excellent' },
-      'meta-llama/Llama-3.3-70B-Instruct': { name: 'Llama 3.3 70B', speed: 'medium', quality: 'excellent' },
-      'mistralai/Mistral-Nemo-Instruct-2407': { name: 'Mistral Nemo 12B', speed: 'very fast', quality: 'good' }
-    };
+    this.availableModels = HF_MODELS;
 
     console.log('🤖 AI Service initialized (Hugging Face + Ollama support)');
   }
@@ -30,9 +37,18 @@ class AIService {
     return settings.huggingface?.apiToken || '';
   }
 
+  /**
+   * The Hugging Face model to use. A custom model the user added is kept;
+   * one of the old built-in choices that has been withdrawn (or a stale
+   * default) gives way to the current default.
+   */
   getPreferredModel() {
     const settings = this.settingsService.getAllSettings();
-    return settings.huggingface?.preferredModel || 'Qwen/Qwen2.5-72B-Instruct';
+    const saved = settings.huggingface?.preferredModel || '';
+    const custom = (settings.huggingface?.customModels || []).map((m) => (typeof m === 'string' ? m : m?.id));
+    const retired = ['mistralai/Mistral-Nemo-Instruct-2407', 'Qwen/Qwen2.5-72B-Instruct'];
+    if (!saved || (retired.includes(saved) && !custom.includes(saved))) return DEFAULT_HF_MODEL;
+    return saved;
   }
 
   getOllamaSettings() {
@@ -275,6 +291,11 @@ class AIService {
    * AI output: positive prompt, then NEGATIVE: on its own line, then negative prompt.
    */
   _buildPromptMessages(tags, tagsByCategory, options) {
+    const preset = getPreset(options?.preset);
+    if (preset.style === 'prose') return this._buildProseMessages(tags, tagsByCategory, options);
+    const quality = qualityLine(preset, { nsfw: Boolean(options?.nsfw) });
+    const negativeExample = `${preset.negative}, duo, group, multiple characters`;
+
     const nsfwNote = options?.nsfw
       ? 'NSFW/explicit content is expected — include ALL explicit anatomy and sexual tags (penis, balls, sheath, foreskin, vagina, vulva, breasts, nipples, areola, etc.) in Section 2 Line B without censoring or omitting any of them.'
       : 'Keep output SFW — omit or rephrase any explicit sexual content.';
@@ -306,10 +327,10 @@ You receive E621 tags organized by category. Arrange EVERY tag into the correct 
 ━━━ POSITIVE PROMPT — 4 SECTIONS ━━━
 
 SECTION 1 — Quality & style (one line, trailing comma):
-• Always begin: masterpiece, best quality, newest, very awa
+• Always begin: ${quality}
 • Do NOT add art style, media-type, or resolution tags (digital media, digital drawing, traditional media, watercolor, hi res, absurd res, etc.) — omit these even if they appear in the input
 • Do NOT append artist attribution ("by [name]") — the user supplies their own trigger word separately, outside this prompt
-Example: masterpiece, best quality, newest, very awa,
+Example: ${quality},
 
 SECTION 2 — Character (EXACTLY TWO lines, both with trailing comma):
 Line A: character count (solo/duo/trio/group) + body form (anthro/feral/human/humanoid/taur) + age (adult) if present
@@ -346,7 +367,7 @@ correct, not an omission bug. See SECTION 1 rules above.
 
 OUTPUT:
 ${PROMPT_START}
-masterpiece, best quality, newest, very awa,
+${quality},
 
 solo, anthro, adult,
 male, wolf, grey fur, blue eyes, black claws, fluffy tail, muscular, penis, balls,
@@ -355,7 +376,7 @@ nude,
 
 standing, looking at viewer, smiling, forest background, dappled sunlight
 NEGATIVE:
-lowres, bad anatomy, bad hands, extra fingers, extra limbs, text, watermark, signature, jpeg artifacts, duo, group, multiple characters
+${negativeExample}
 ${PROMPT_END}
 
 ━━━ CRITICAL RULES ━━━
@@ -405,6 +426,39 @@ Reply with only the ${PROMPT_START} ... ${PROMPT_END} block. Nothing else.`;
     return [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userContent }
+    ];
+  }
+
+  /**
+   * Messages for a natural-language preset (Flux): the same tags, written as
+   * a short description instead of a tag list, inside the same markers.
+   */
+  _buildProseMessages(tags, tagsByCategory, options) {
+    const explicit = options?.nsfw
+      ? 'Explicit content is expected: describe every anatomy and sexual tag plainly, without censoring or skipping any.'
+      : 'Keep it safe for work: leave out or soften explicit sexual content.';
+    const systemPrompt = `You turn e621 booru tags into a prompt for an image model that reads natural language (Flux).
+
+Reply with exactly one block and nothing else:
+${PROMPT_START}
+(the prompt)
+NEGATIVE:
+(leave empty)
+${PROMPT_END}
+
+The prompt is two to five plain sentences describing one image: the subject and how many there are, body form and species, physical details, clothing, pose and action, expression, setting, lighting and camera view. Use every tag except artist and media/resolution tags (digital media, hi res, absurd res and similar), which you leave out. Name characters if a character tag is given. Use plain spaces, not underscores. No quality words like "masterpiece", no lists, no markdown, no commentary. ${explicit}`;
+
+    const lines = [];
+    if (tagsByCategory) {
+      for (const [label, key] of [['Species', 'species'], ['Character', 'character'], ['General', 'general'], ['Copyright', 'copyright'], ['Lore', 'lore']]) {
+        if (tagsByCategory[key]?.length) lines.push(`${label} tags: ${tagsByCategory[key].join(', ')}`);
+      }
+    } else {
+      lines.push(`Tags: ${tags.join(', ')}`);
+    }
+    return [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: `${lines.join('\n')}\n\nReply with only the ${PROMPT_START} ... ${PROMPT_END} block.` }
     ];
   }
 
@@ -590,6 +644,10 @@ Provide ONLY the negative prompt as a comma-separated list, nothing else.`;
 
   getAvailableModels() {
     return this.availableModels;
+  }
+
+  getDefaultModel() {
+    return DEFAULT_HF_MODEL;
   }
 
   /**

@@ -316,3 +316,27 @@
   width: var(--control-h);
   padding: 0;
 }
+
+/* Prompt style and saved prompts, beside the NSFW toggle */
+.ap-preset-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.ap-preset-select,
+.ap-saved-select {
+  width: auto;
+  max-width: 220px;
+}
+
+/* Keep Delete / Save / Copy together on the right of the output header. */
+.ap-out-header {
+  gap: 6px;
+}
+
+.ap-out-header .ap-out-label {
+  margin-right: auto;
+}

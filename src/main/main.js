@@ -27,6 +27,7 @@ const VideoFrameIPC = require('./ipc/VideoFrameIPC');
 const CleanupIPC = require('./ipc/CleanupIPC');
 const ModelsIPC = require('./ipc/ModelsIPC');
 const CaptionIPC = require('./ipc/CaptionIPC');
+const PromptLibraryIPC = require('./ipc/PromptLibraryIPC');
 const versionInfo = require('../shared/version');
 
 // Log version information on startup
@@ -194,6 +195,7 @@ async function setupServices() {
   new CleanupIPC();
   new ModelsIPC();
   new CaptionIPC(settingsService);
+  new PromptLibraryIPC();
 
   console.log('✅ Services initialized');
 }

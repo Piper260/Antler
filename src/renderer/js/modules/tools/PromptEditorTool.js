@@ -412,12 +412,8 @@ Output starts immediately with the replacement. No lead-in text.`
   }
 
   _modelShortName(modelId) {
-    const names = {
-      'Qwen/Qwen2.5-72B-Instruct': 'Qwen 2.5 72B',
-      'meta-llama/Llama-3.3-70B-Instruct': 'Llama 3.3 70B',
-      'mistralai/Mistral-Nemo-Instruct-2407': 'Mistral Nemo 12B',
-    };
-    return names[modelId] || (modelId ? modelId.split('/').pop() : 'Default Model');
+    // Names come from the AI service's model list (see _checkAIStatus).
+    return this._modelNames?.[modelId]?.name || (modelId ? modelId.split('/').pop() : 'Default Model');
   }
 
   async _checkAIStatus() {
@@ -459,8 +455,9 @@ Output starts immediately with the replacement. No lead-in text.`
     if (!hfEnabled && ollamaOk) {
       this._setProvider('ollama');
     } else if (badge && window.electronAPI?.settings?.get) {
-      const saved   = await window.electronAPI.settings.get('huggingface.preferredModel');
-      const modelId = saved?.value || 'Qwen/Qwen2.5-72B-Instruct';
+      const info    = await window.electronAPI.ai.getModels().catch(() => null);
+      this._modelNames = info?.models || {};
+      const modelId = info?.preferred || info?.defaultModel || '';
       this._hfModel         = modelId;
       badge.textContent     = this._modelShortName(modelId);
       badge.dataset.modelId = modelId;

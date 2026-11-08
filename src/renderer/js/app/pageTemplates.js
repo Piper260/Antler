@@ -94,12 +94,8 @@ class AppPageTemplates {
 
           <div class="form-group" id="ai-model-group" style="display: none;">
             <label class="form-label">Preferred Model</label>
-            <select class="form-input" id="hf-model-select">
-              <option value="Qwen/Qwen2.5-72B-Instruct">Qwen 2.5 72B (Recommended - Fast & Excellent)</option>
-              <option value="meta-llama/Llama-3.3-70B-Instruct">Llama 3.3 70B (Medium Speed, Excellent Quality)</option>
-              <option value="mistralai/Mistral-Nemo-Instruct-2407">Mistral Nemo 12B (Very Fast, Good Quality)</option>
-            </select>
-            <small class="form-help">All models are free to use with the Inference API</small>
+            <select class="form-input" id="hf-model-select"></select>
+            <small class="form-help">Run through Hugging Face's inference router; free-tier credits cover light use.</small>
           </div>
 
           <div class="form-group" id="ai-custom-model-group" style="display: none;">

@@ -47,8 +47,8 @@ Everything runs on your own machine. Antler talks to e621, and to your own Comfy
 
 | Tool | What it does |
 | --- | --- |
-| **Auto Prompter** | Turn post IDs into structured prompts. |
-| **Prompt Editor** | Refine prompts by hand or with an LLM through Hugging Face or Ollama. |
+| **Auto Prompter** | Turn a post (or tags you paste) into a prompt for the base model you use: Illustrious/NoobAI, Pony, SDXL, or Flux in plain sentences. Save the ones you like and reuse them later. |
+| **Prompt Editor** | Refine prompts by hand or with an LLM through Hugging Face (Qwen 3.8, DeepSeek V3.2, Gemma 4 and others) or a model in Ollama. |
 
 ## Requirements
 

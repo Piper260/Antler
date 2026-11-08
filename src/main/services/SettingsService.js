@@ -48,7 +48,7 @@ class SettingsService {
       huggingface: {
         apiToken: '',
         enableAI: false,
-        preferredModel: 'Qwen/Qwen2.5-72B-Instruct',
+        preferredModel: 'Qwen/Qwen3.8-27B',
         temperature: 0.7,
         customModels: []
       },

@@ -268,6 +268,13 @@ const electronAPI = {
     onProgress: (callback) => safeOn('cleanup:progress', callback)
   },
 
+  // Prompts saved from the Auto Prompter
+  prompts: {
+    list: () => safeInvoke('prompts:list'),
+    save: (entry) => safeInvoke('prompts:save', entry),
+    remove: (id) => safeInvoke('prompts:delete', id)
+  },
+
   // Natural-language captions (Tag Editor > Caption with AI)
   captions: {
     models: () => safeInvoke('captions:models'),

@@ -36,6 +36,7 @@ Everything runs on your own machine. Antler talks to e621, and to your own Comfy
 | Tool | What it does |
 | --- | --- |
 | **Tag Editor** | Browse a dataset, edit captions, see tag frequency, and catch captions over the token budget or images below the size you need. Batch-tag with Hydra and review the tags it is unsure about. |
+| **Caption with AI** | In the Tag Editor: write natural-language captions with a vision model running in Ollama on your computer, using each image's tags as ground truth. Preview a few, then caption the dataset into separate `.caption` files, or into the `.txt` (sentence plus tags, or sentence only) with the originals kept in `bak/`. |
 | **Comic Panels** | Split comic pages into panels and tag each panel with Hydra for review. Your corrections are remembered and applied to later panels. |
 | **Image Cleanup** | Detect speech bubbles automatically, mark signatures and captions by hand, and remove them with Flux Fill on ComfyUI. Originals are kept in `bak/`. |
 | **Image Upscaler** | Flag images below your target resolution and upscale them with UltraSharp V2 or one of the bundled ncnn models. |
@@ -54,7 +55,7 @@ Everything runs on your own machine. Antler talks to e621, and to your own Comfy
 - **Windows 10 or 11** (x64), **macOS** on Apple Silicon, or **Linux** (x64).
 - **An e621 account** with an API key.
 - Optional: a **ComfyUI** server with Flux Fill for Image Cleanup.
-- Optional: **Ollama** or a **Hugging Face** token for the prompt tools.
+- Optional: **Ollama** for AI captions (with a vision model such as `gemma3`) and the prompt tools, or a **Hugging Face** token for the prompt tools.
 
 The bundled ncnn upscalers and GPU-accelerated tagging (DirectML) are Windows-only. On macOS and Linux the Image Upscaler uses the UltraSharp V2 models and tagging runs on the CPU.
 

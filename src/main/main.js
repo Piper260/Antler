@@ -26,6 +26,7 @@ const ComicPanelIPC = require('./ipc/ComicPanelIPC');
 const VideoFrameIPC = require('./ipc/VideoFrameIPC');
 const CleanupIPC = require('./ipc/CleanupIPC');
 const ModelsIPC = require('./ipc/ModelsIPC');
+const CaptionIPC = require('./ipc/CaptionIPC');
 const versionInfo = require('../shared/version');
 
 // Log version information on startup
@@ -192,6 +193,7 @@ async function setupServices() {
   new VideoFrameIPC();
   new CleanupIPC();
   new ModelsIPC();
+  new CaptionIPC(settingsService);
 
   console.log('✅ Services initialized');
 }

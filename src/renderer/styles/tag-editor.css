@@ -547,3 +547,65 @@ table.has-hydra .te-col-hydra {
 .te-dialog-list {
   max-height: 320px;
 }
+
+/* Caption with AI */
+.te-captions {
+  max-width: 720px;
+}
+
+.te-captions-intro {
+  margin-bottom: 12px;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.te-captions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+
+.te-captions-grid .form-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.te-captions-results {
+  display: flex;
+  flex-direction: column;
+  max-height: 260px;
+  margin-top: 12px;
+  overflow-y: auto;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+}
+
+.te-captions-results:empty {
+  display: none;
+}
+
+.te-captions-row {
+  padding: 8px 10px;
+}
+
+.te-captions-row + .te-captions-row {
+  border-top: 1px solid var(--border-primary);
+}
+
+.te-captions-file {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.te-captions-row p {
+  margin-top: 2px;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.te-captions-progress {
+  margin-right: auto;
+}

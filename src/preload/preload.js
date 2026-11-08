@@ -268,6 +268,14 @@ const electronAPI = {
     onProgress: (callback) => safeOn('cleanup:progress', callback)
   },
 
+  // Natural-language captions (Tag Editor > Caption with AI)
+  captions: {
+    models: () => safeInvoke('captions:models'),
+    run: (items, options) => safeInvoke('captions:run', items, options),
+    cancel: () => safeInvoke('captions:cancel'),
+    onProgress: (callback) => safeOn('captions:progress', callback)
+  },
+
   // Dataset libraries (Settings > Storage)
   storage: {
     getLibraries: () => safeInvoke('storage:get-libraries'),

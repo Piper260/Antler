@@ -1,4 +1,5 @@
 import { countTokens } from '../../utils/tokenCounter.js';
+import TagEditorCaptions from './tag-editor/captions.js';
 
 // Captions longer than this are flagged; it is the usual CLIP budget for
 // LoRA training (3 x 75 tokens).
@@ -143,6 +144,7 @@ class TagEditorTool extends BaseTool {
             </select>
             <button class="btn" id="te-all-tags" title="View, rename and delete tags across the whole dataset">All Tags</button>
             <button class="btn" id="te-batch-open" hidden title="Run Hydra over many files and add the tags it is confident about">Tag with Hydra</button>
+            <button class="btn" id="te-caption-open" title="Write natural-language captions with a vision model in Ollama">Caption with AI</button>
             <button class="btn btn-primary" id="te-save-all" disabled>Save All</button>
           </div>
           <div class="te-grid" id="te-grid"></div>
@@ -387,7 +389,8 @@ class TagEditorTool extends BaseTool {
       'te-batch-open', 'te-batch', 'te-batch-close', 'te-batch-scope', 'te-batch-scan', 'te-batch-stop',
       'te-batch-progress', 'te-batch-threshold', 'te-batch-categories', 'te-batch-summary', 'te-batch-rows',
       'te-batch-mode', 'te-batch-threshold-label', 'te-batch-head', 'te-batch-note',
-      'te-batch-undo', 'te-batch-done', 'te-batch-apply'
+      'te-batch-undo', 'te-batch-done', 'te-batch-apply',
+      'te-caption-open'
     ];
     this.el = {};
     ids.forEach(id => {
@@ -474,6 +477,9 @@ class TagEditorTool extends BaseTool {
       }
     });
     this.on(el.hydraHidden, 'click', () => this.editHiddenSuggestions());
+
+    // Caption with AI
+    this.on(el.captionOpen, 'click', () => this.openCaptions());
 
     // Tag with Hydra
     this.on(el.batchOpen, 'click', () => this.openBatch());
@@ -2052,6 +2058,8 @@ class TagEditorTool extends BaseTool {
 
   destroy() {
     this.stopBatch();
+    this.captionProgressOff?.();
+    this.captionModal = null;
     this.thumbObserver?.disconnect();
     this.thumbObserver = null;
     if (this.dialogResolve) this.closeDialog(null);
@@ -2060,6 +2068,8 @@ class TagEditorTool extends BaseTool {
     super.destroy();
   }
 }
+
+window.mixMethods(TagEditorTool, TagEditorCaptions);
 
 window.TagEditorTool = TagEditorTool;
 export default TagEditorTool;

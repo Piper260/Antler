@@ -1,6 +1,6 @@
 {
   "_comment": "Files with a 'source' download from the original author's Hugging Face repo, pinned to a commit. Files without one come from 'repo': Antler's ONNX conversion of Hydra, whose author only publishes PyTorch weights. Sizes and sha256 are checked after download; refresh them with npm run models:manifest.",
-  "repo": "PIper260/antler-models",
+  "repo": "Piper260/antler-models",
   "revision": "main",
   "packs": [
     {

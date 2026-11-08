@@ -11,7 +11,7 @@ downloads it from the author's own Hugging Face repo, pinned to a commit
 detector, the comic bubble detector and Z3D.
 
 Hydra 3.5 is only published as PyTorch weights, so Antler uses its own ONNX
-conversion, hosted at `PIper260/antler-models`. Hydra is Apache-2.0, which
+conversion, hosted at `Piper260/antler-models`. Hydra is Apache-2.0, which
 allows this with credit.
 
 ## Publishing the Hydra conversion (maintainer)
@@ -33,8 +33,8 @@ allows this with credit.
 4. Create the repo once, then upload:
 
    ```bash
-   hf repo create PIper260/antler-models --repo-type model
-   hf upload PIper260/antler-models resources/models . --include "tagger/hydra-*"
+   hf repo create Piper260/antler-models --repo-type model
+   hf upload Piper260/antler-models resources/models . --include "tagger/hydra-*"
    ```
 
 5. Check from a clean machine (or after deleting `%APPDATA%\antler\models`)

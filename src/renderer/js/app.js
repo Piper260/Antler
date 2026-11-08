@@ -1022,7 +1022,7 @@ class AntlerApp {
 }
 
 // The page methods live in js/app/ (loaded before this file).
-mixMethods(AntlerApp, AppPageTemplates, AppInfoPages, AppSettingsPage, AppModels, AppUpdates);
+mixMethods(AntlerApp, AppPageTemplates, AppInfoPages, AppSettingsPage, AppModels, AppUpdates, AppLibraries);
 
 /**
  * Initialize the application when DOM is ready

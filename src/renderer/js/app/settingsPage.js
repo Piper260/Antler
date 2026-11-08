@@ -31,6 +31,7 @@ class AppSettingsPage {
   try {
     await this.loadCurrentSettings();
     this.setupSettingsEventListeners();
+    await this.setupLibrariesSection();
     await this.setupModelsSection();
 
   } catch (error) {
@@ -119,18 +120,6 @@ class AppSettingsPage {
         hasToken: settings.huggingface?.apiToken ? 'Set' : 'Missing',
         model: settings.huggingface?.preferredModel,
         temperature: settings.huggingface?.temperature
-      });
-
-      // Load storage paths
-      const artistsPathInput = document.getElementById('artists-path-input');
-      const charactersPathInput = document.getElementById('characters-path-input');
-      
-      if (artistsPathInput) artistsPathInput.value = settings.storage?.artistsPath || '';
-      if (charactersPathInput) charactersPathInput.value = settings.storage?.charactersPath || '';
-      
-      console.log('📁 Storage paths loaded:', {
-        artists: settings.storage?.artistsPath || 'Using default',
-        characters: settings.storage?.charactersPath || 'Using default'
       });
     }
 
@@ -227,18 +216,6 @@ class AppSettingsPage {
     if (resetBtn) {
       resetBtn.addEventListener('click', () => this.resetSettings());
     }
-
-    // Storage paths buttons
-    const browseArtistsBtn = document.getElementById('browse-artists-btn');
-    const browseCharactersBtn = document.getElementById('browse-characters-btn');
-    
-    if (browseArtistsBtn) {
-      browseArtistsBtn.addEventListener('click', () => this.browseStorageDirectory('artists'));
-    }
-    
-    if (browseCharactersBtn) {
-      browseCharactersBtn.addEventListener('click', () => this.browseStorageDirectory('characters'));
-    }
   }
 
   /**
@@ -307,8 +284,6 @@ class AppSettingsPage {
     const aiModel = document.getElementById('hf-model-select')?.value || 'Qwen/Qwen2.5-72B-Instruct';
     const aiTemp = parseFloat(document.getElementById('ai-temperature-slider')?.value) || 0.7;
     const aiCustomModels = this._getCustomModelsFromUI();
-    const artistsPath = document.getElementById('artists-path-input')?.value.trim() || '';
-    const charactersPath = document.getElementById('characters-path-input')?.value.trim() || '';
     
     console.log('📝 Form values being saved:', {
       e621Username,
@@ -316,9 +291,7 @@ class AppSettingsPage {
       aiEnabled,
       aiToken: aiToken ? '***' : '(empty)',
       aiModel,
-      aiTemp,
-      artistsPath,
-      charactersPath
+      aiTemp
     });
     
     const settings = {
@@ -343,10 +316,6 @@ class AppSettingsPage {
         debugMode: false,
         logLevel: 'info',
         cacheEnabled: true
-      },
-      storage: {
-        artistsPath: artistsPath,
-        charactersPath: charactersPath
       }
     };
 
@@ -955,90 +924,5 @@ class AppSettingsPage {
         selectModel(modelId);
       });
     }
-  }
-
-  /**
-   * Browse for storage directory
-   */
-  async browseStorageDirectory(type) {
-    try {
-      const result = await window.electronAPI.tagEditor.browseCustomFolder();
-      
-      if (result.success && result.folderPath) {
-        let inputId;
-        if (type === 'artists') inputId = 'artists-path-input';
-        else if (type === 'characters') inputId = 'characters-path-input';
-        
-        const input = document.getElementById(inputId);
-        
-        if (input) {
-          input.value = result.folderPath;
-          console.log(`📁 Selected ${type} path:`, result.folderPath);
-        }
-      }
-    } catch (error) {
-      console.error('❌ Error browsing directory:', error);
-      this.showToast('Failed to open directory browser', 'error');
-    }
-  }
-
-  /**
-   * Save storage paths
-   */
-  async saveStoragePaths() {
-    console.log('💾 Saving storage paths...');
-    
-    const saveBtn = document.getElementById('save-storage-paths-btn');
-    const artistsPathInput = document.getElementById('artists-path-input');
-    const charactersPathInput = document.getElementById('characters-path-input');
-    
-    const settings = {
-      storage: {
-        artistsPath: artistsPathInput?.value.trim() || '',
-        charactersPath: charactersPathInput?.value.trim() || ''
-      }
-    };
-    
-    // Show loading state
-    saveBtn.disabled = true;
-    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-    
-    try {
-      const result = await window.electronAPI.settings.save(settings);
-      
-      if (result.success) {
-        this.showStorageStatus('Storage paths saved successfully!', 'success');
-        this.showToast('Storage paths saved!', 'success');
-      } else {
-        this.showStorageStatus('Failed to save storage paths', 'error');
-        this.showToast('Failed to save storage paths', 'error');
-      }
-      
-    } catch (error) {
-      console.error('❌ Error saving storage paths:', error);
-      this.showStorageStatus('Error saving paths', 'error');
-      this.showToast('Error saving storage paths', 'error');
-    } finally {
-      // Restore button state
-      saveBtn.disabled = false;
-      saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Storage Paths';
-    }
-  }
-
-  /**
-   * Show storage status message
-   */
-  showStorageStatus(message, type = 'info') {
-    const statusEl = document.getElementById('storage-status');
-    if (!statusEl) return;
-    
-    statusEl.style.display = 'block';
-    statusEl.className = `credentials-status status-${type}`;
-    statusEl.textContent = message;
-    
-    // Auto-hide after 10 seconds
-    setTimeout(() => {
-      statusEl.style.display = 'none';
-    }, 10000);
   }
 }

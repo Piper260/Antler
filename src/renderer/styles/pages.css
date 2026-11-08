@@ -222,3 +222,75 @@
   gap: 8px;
   margin-top: 8px;
 }
+
+/* Settings > Storage: dataset libraries */
+.library-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+}
+
+.library-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+}
+
+.library-row + .library-row {
+  border-top: 1px solid var(--border-primary);
+}
+
+.library-default {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 92px;
+  flex-shrink: 0;
+  padding-top: 6px;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+
+.library-default input:checked + span {
+  color: var(--accent-primary);
+}
+
+.library-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.library-name {
+  max-width: 280px;
+}
+
+.library-path {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.library-path.is-missing {
+  color: var(--warning);
+}
+
+.library-note {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.library-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+  padding-top: 2px;
+}

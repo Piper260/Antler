@@ -3,7 +3,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const { IMAGE_EXTENSIONS, MEDIA_EXTENSIONS, TEXT_EXTENSIONS, requireFile, requireLocalPath, requireName, requireFileName, requireWebUrl } = require('../utils/pathGuard');
 const { writeFileSafe } = require('../utils/safeWrite');
-const { resolveDatasetFolderPath } = require('../utils/datasetFolders');
+const { datasetPath } = require('../utils/datasetLibraries');
 
 // Supported image extensions for dataset folder scanning / raw byte reads
 // (Image Resizer + Image Upscaler "choose dataset folder" feature).
@@ -32,16 +32,17 @@ class UtilsIPC {
     console.log('🔗 Utils IPC handlers registered');
   }
   
-  /** The folder that holds every artist (or character) dataset. */
-  getStorageRoot(type = 'artist') {
-    const datasetType = type === 'character' ? 'character' : 'artist'; // 'post' downloads go with artists
-    if (!this.settingsService) {
-      // Fallback to default structure
-      const subFolder = datasetType === 'character' ? 'characters' : 'artists';
-      return path.join(process.cwd(), 'downloads', subFolder);
-    }
-    const storagePaths = this.settingsService.getResolvedStoragePaths();
-    return datasetType === 'character' ? storagePaths.charactersPath : storagePaths.artistsPath;
+  /** The dataset libraries (see utils/datasetLibraries.js). */
+  getLibraries() {
+    if (this.settingsService) return this.settingsService.getLibraries();
+    const fallback = path.join(process.cwd(), 'downloads');
+    return { libraries: [{ id: 'datasets', name: 'Datasets', path: fallback, type: null }], defaultId: 'datasets' };
+  }
+
+  /** The library new downloads go to. */
+  getStorageRoot() {
+    const { libraries, defaultId } = this.getLibraries();
+    return (libraries.find((lib) => lib.id === defaultId) || libraries[0]).path;
   }
 
   /**
@@ -52,13 +53,14 @@ class UtilsIPC {
    * directory name so a bad value can't escape the artist folder.
    */
   getDownloadPath(folderName, type = 'artist', categorySubFolder = '') {
-    // One folder per artist or character, never a path out of the downloads folder.
+    // One folder per artist or character, never a path out of a library.
     folderName = requireName(folderName, 'folder name');
-    const datasetType = type === 'character' ? 'character' : 'artist';
-    const storageRoot = this.getStorageRoot(datasetType);
-    // Folders are named "artists_<name>" / "characters_<name>"; an existing
-    // unprefixed folder from the older layout is still used if there is one.
-    const basePath = resolveDatasetFolderPath(storageRoot, folderName, datasetType);
+    const datasetType = type === 'character' ? 'character' : 'artist'; // 'post' downloads go with artists
+    // The library that already has this dataset, else the default one. Folders
+    // are named "artists_<name>" / "characters_<name>"; an existing unprefixed
+    // folder from the older layout is still used if there is one.
+    const { libraries, defaultId } = this.getLibraries();
+    const basePath = datasetPath(libraries, defaultId, folderName, datasetType);
 
     const safeSub = this._sanitizeCategorySubFolder(categorySubFolder);
     return safeSub ? path.join(basePath, safeSub) : basePath;
@@ -368,37 +370,53 @@ class UtilsIPC {
       }
     });
 
-    // Get storage paths
-    ipcMain.handle('utils:getStoragePaths', async () => {
+    // Dataset libraries: the folders datasets live in, and the default one.
+    ipcMain.handle('storage:get-libraries', async () => {
       try {
-        if (this.settingsService && typeof this.settingsService.getResolvedStoragePaths === 'function') {
-          const paths = this.settingsService.getResolvedStoragePaths();
-          return {
-            success: true,
-            paths: {
-              artistsPath: paths.artistsPath,
-              charactersPath: paths.charactersPath,
-              isCustom: paths.isCustom
-            }
-          };
-        } else {
-          // Return defaults if settings service not available
-          const baseDownloads = path.join(process.cwd(), 'downloads');
-          return {
-            success: true,
-            paths: {
-              artistsPath: path.join(baseDownloads, 'artists'),
-              charactersPath: path.join(baseDownloads, 'characters'),
-              isCustom: { artists: false, characters: false }
-            }
-          };
-        }
+        const { libraries, defaultId } = this.getLibraries();
+        const withState = await Promise.all(libraries.map(async (lib) => {
+          let exists = false;
+          try {
+            exists = (await fs.stat(lib.path)).isDirectory();
+          } catch {
+            // missing: e.g. an unplugged drive
+          }
+          return { ...lib, exists };
+        }));
+        return { success: true, libraries: withState, defaultId };
       } catch (error) {
-        console.error('❌ Error getting storage paths:', error);
-        return {
-          success: false,
-          message: `Failed to get storage paths: ${error.message}`
-        };
+        return { success: false, message: error.message };
+      }
+    });
+
+    // Opens a library by id, so only folders in Settings can be opened this way.
+    ipcMain.handle('storage:open-library', async (event, id) => {
+      const library = this.getLibraries().libraries.find((lib) => lib.id === id);
+      if (!library) return { success: false, message: 'Unknown library' };
+      await fs.mkdir(library.path, { recursive: true });
+      const error = await shell.openPath(library.path);
+      return error ? { success: false, message: error } : { success: true };
+    });
+
+    ipcMain.handle('storage:save-libraries', async (event, libraries, defaultId) => {
+      try {
+        if (!Array.isArray(libraries) || libraries.length === 0) throw new Error('Keep at least one library');
+        const clean = libraries.slice(0, 50).map((lib, index) => {
+          const folder = requireLocalPath(lib?.path, 'library folder');
+          const name = String(lib?.name || '').trim().slice(0, 60) || path.basename(folder);
+          const type = lib?.type === 'artist' || lib?.type === 'character' ? lib.type : null;
+          const id = String(lib?.id || `library-${index + 1}`).slice(0, 80);
+          return { id, name, path: folder, type };
+        });
+        const chosen = clean.some((lib) => lib.id === defaultId) ? defaultId : clean[0].id;
+        // The default library is where downloads go, so make sure it exists.
+        await fs.mkdir(clean.find((lib) => lib.id === chosen).path, { recursive: true });
+        await this.settingsService.saveSettings({ storage: { libraries: clean, defaultLibrary: chosen } });
+        const saved = this.getLibraries();
+        return { success: true, libraries: saved.libraries, defaultId: saved.defaultId };
+      } catch (error) {
+        console.error('❌ Error saving libraries:', error);
+        return { success: false, message: error.message };
       }
     });
 

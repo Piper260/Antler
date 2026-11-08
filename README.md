@@ -88,14 +88,16 @@ npm start
 Open **Settings** on first launch.
 
 1. **e621 account.** Enter your username and API key (on e621: Account > API Access). Keys are encrypted on disk.
-2. **Dataset folders.** Point **Artists** and **Characters** at where datasets should be saved. Both can point at the same folder.
+2. **Storage.** Antler keeps datasets in `Documents\Antler` unless you choose otherwise. Add any folders you already keep datasets in as libraries, and pick which one new downloads go to.
 3. **LLM (optional).** Connect Ollama or Hugging Face for the prompt tools.
 
 Image Cleanup asks for the ComfyUI server address inside the tool.
 
 ## Dataset layout
 
-Each artist or character gets one folder, prefixed with its type:
+Datasets live in **libraries**: folders you list under **Settings > Storage**. You can have as many as you like, for example one per drive. Every tool shows the datasets from all of them. A download goes into the library that already holds that artist or character, otherwise into the one you've marked as the default, so a dataset never ends up split across two.
+
+Inside a library, each artist or character gets one folder, prefixed with its type:
 
 ```
 F:\Datasets\
@@ -108,8 +110,9 @@ F:\Datasets\
     └── 2345678.txt
 ```
 
-- The `artists_` and `characters_` prefixes are how Antler tells the two apart, which is why both settings can share one folder.
-- Older folders without a prefix still work and take the type of the setting they live under.
+- The `artists_` and `characters_` prefixes are how Antler tells the two apart, so artists and characters share a library.
+- Older folders without a prefix still work. Settings from earlier versions (separate Artists and Characters folders) become libraries automatically, and unprefixed folders keep the type they had.
+- Removing a library only takes it off the list; nothing on disk is deleted.
 - Anything Antler sets aside, such as originals before an upscale or cleanup, goes into `bak/` and is skipped by every scan.
 
 ## Models

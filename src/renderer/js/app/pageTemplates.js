@@ -139,35 +139,16 @@ class AppPageTemplates {
           </div>
         </div>
 
-        <!-- Storage Paths Configuration -->
-        <div class="settings-section">
-          <h3><i class="fas fa-folder-open"></i> Storage Paths</h3>
-          <p class="text-muted mb-3">Configure custom storage locations for downloaded content.</p>
-          
-          <div class="form-group">
-            <label class="form-label">Artists Directory</label>
-            <div class="input-button-group">
-              <input type="text" class="form-input" id="artists-path-input" placeholder="Default: downloads/artists">
-              <button class="btn btn-secondary browse-btn" id="browse-artists-btn">
-                <i class="fas fa-folder-open"></i> Browse
-              </button>
-            </div>
-            <small class="form-help">Custom path for artist datasets. Leave empty for default location.</small>
+        <!-- Dataset libraries -->
+        <div class="settings-section" id="libraries-settings">
+          <h3><i class="fas fa-folder-open"></i> Storage</h3>
+          <p class="text-muted mb-3">Folders your datasets live in. Every tool lists the datasets in all of them. A download goes to the library that already has that artist or character, otherwise to the default one. Changes save straight away.</p>
+          <div data-libraries-list></div>
+          <div class="form-actions">
+            <button class="btn btn-secondary" data-libraries-add><i class="fas fa-plus"></i> Add library</button>
           </div>
-          
-          <div class="form-group">
-            <label class="form-label">Characters Directory</label>
-            <div class="input-button-group">
-              <input type="text" class="form-input" id="characters-path-input" placeholder="Default: downloads/characters">
-              <button class="btn btn-secondary browse-btn" id="browse-characters-btn">
-                <i class="fas fa-folder-open"></i> Browse
-              </button>
-            </div>
-            <small class="form-help">Custom path for character datasets. Leave empty for default location.</small>
-          </div>
-          
         </div>
-        
+
         <!-- Models -->
         <div class="settings-section" id="models-settings">
           <h3><i class="fas fa-cube"></i> Models</h3>

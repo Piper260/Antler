@@ -3,6 +3,7 @@ const fs = require('fs');
 const { writeFileSafeSync } = require('../utils/safeWrite');
 const path = require('path');
 const { app, safeStorage } = require('electron');
+const { resolveLibraries } = require('../utils/datasetLibraries');
 
 // Dot-paths of settings fields that hold sensitive secrets (API keys/tokens).
 // These are encrypted at rest via Electron's OS-backed safeStorage; the
@@ -67,8 +68,10 @@ class SettingsService {
         cacheEnabled: true
       },
       storage: {
-        artistsPath: '',
-        charactersPath: ''
+        // Folders that hold datasets, and the one new downloads go to.
+        // Older versions used artistsPath/charactersPath; getLibraries() moves them over.
+        libraries: [],
+        defaultLibrary: ''
       }
     };
 
@@ -347,37 +350,22 @@ class SettingsService {
     };
   }
 
-  getStorageSettings() {
-    const storage = this.settings.storage || {};
-    return {
-      artistsPath: storage.artistsPath || '',
-      charactersPath: storage.charactersPath || ''
-    };
-  }
-
-  getResolvedStoragePaths() {
-    const baseDownloads = path.join(process.cwd(), 'downloads');
-    const storage = this.getStorageSettings();
-
-    const normalize = (value, fallback) => {
-      if (typeof value === 'string' && value.trim().length > 0) {
-        return value.trim();
-      }
-      return fallback;
-    };
-
-    const artistsPath = normalize(storage.artistsPath, path.join(baseDownloads, 'artists'));
-    const charactersPath = normalize(storage.charactersPath, path.join(baseDownloads, 'characters'));
-
-    return {
-      baseDownloads,
-      artistsPath,
-      charactersPath,
-      isCustom: {
-        artists: !!(storage.artistsPath && storage.artistsPath.trim().length > 0),
-        characters: !!(storage.charactersPath && storage.charactersPath.trim().length > 0)
-      }
-    };
+  /**
+   * The dataset libraries and which one takes new downloads (see
+   * utils/datasetLibraries.js). The first call after an update moves the old
+   * Artists/Characters folder settings over and saves the result.
+   */
+  getLibraries() {
+    const result = resolveLibraries(this.settings.storage || {}, {
+      defaultRoot: path.join(app.getPath('documents'), 'Antler'),
+      // The old built-in location, relative to the working folder.
+      legacyRoot: path.join(process.cwd(), 'downloads')
+    });
+    if (result.migrated) {
+      this.settings.storage = { ...(this.settings.storage || {}), libraries: result.libraries, defaultLibrary: result.defaultId };
+      this.saveSettings().catch((error) => console.error('Could not save migrated libraries:', error));
+    }
+    return { libraries: result.libraries, defaultId: result.defaultId };
   }
 
   /**

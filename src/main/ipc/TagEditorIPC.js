@@ -8,6 +8,7 @@ const { imageSizeFromFile } = require('image-size/fromFile');
 const { IMAGE_EXTENSIONS: GUARD_IMAGE_EXTENSIONS, TEXT_EXTENSIONS, requireFile } = require('../utils/pathGuard');
 const { writeFileSafe } = require('../utils/safeWrite');
 const { parseDatasetFolderName } = require('../utils/datasetFolders');
+const { datasetType } = require('../utils/datasetLibraries');
 const { findTagger } = require('../utils/taggers');
 const ComicVisionService = require('../services/ComicVisionService');
 const { ThumbnailCache } = require('../services/thumbnailCache');
@@ -248,35 +249,21 @@ class TagEditorIPC {
    */
   async getDownloadedArtists() {
     const artists = [];
-    const storageConfig = this.getStorageConfig();
     const scannedFolders = new Set();
 
     try {
-      await this.collectEntriesFromPath({
-        list: artists,
-        basePath: storageConfig.artistsPath,
-        type: 'artist',
-        label: storageConfig.isCustom.artists ? 'Custom Artist Storage' : 'Artists',
-        isCustom: storageConfig.isCustom.artists,
-        scannedFolders,
-        storageConfig
-      });
+      // Every library the user keeps datasets in (Settings > Storage).
+      for (const library of this.getLibraries()) {
+        await this.collectEntriesFromLibrary({ list: artists, library, scannedFolders });
+      }
 
-      await this.collectEntriesFromPath({
-        list: artists,
-        basePath: storageConfig.charactersPath,
-        type: 'character',
-        label: storageConfig.isCustom.characters ? 'Custom Character Storage' : 'Characters',
-        isCustom: storageConfig.isCustom.characters,
-        scannedFolders,
-        storageConfig
-      });
-
+      // Loose folders in the old built-in downloads folder.
+      const legacyRoot = path.join(process.cwd(), 'downloads');
       await this.collectLegacyEntries({
         list: artists,
-        baseDownloads: storageConfig.baseDownloads,
+        baseDownloads: legacyRoot,
         scannedFolders,
-        storageConfig
+        storageConfig: { baseDownloads: legacyRoot }
       });
 
       artists.sort((a, b) => b.lastModified - a.lastModified);
@@ -751,41 +738,27 @@ class TagEditorIPC {
     }
   }
 
-  getStorageConfig() {
-    if (this.settingsService && typeof this.settingsService.getResolvedStoragePaths === 'function') {
-      return this.settingsService.getResolvedStoragePaths();
-    }
-
-    const baseDownloads = this.defaultDownloadsPath;
-    return {
-      baseDownloads,
-      artistsPath: path.join(baseDownloads, 'artists'),
-      charactersPath: path.join(baseDownloads, 'characters'),
-      isCustom: {
-        artists: false,
-        characters: false
-      }
-    };
+  /** The dataset libraries from Settings > Storage. */
+  getLibraries() {
+    if (this.settingsService) return this.settingsService.getLibraries().libraries;
+    return [{ id: 'datasets', name: 'Datasets', path: this.defaultDownloadsPath, type: null }];
   }
 
-  async collectEntriesFromPath({ list, basePath, type, label, isCustom, scannedFolders, storageConfig }) {
-    if (!basePath) return;
-    const resolvedBase = path.resolve(basePath);
-    
+  /** Adds every dataset folder in one library to `list`. */
+  async collectEntriesFromLibrary({ list, library, scannedFolders }) {
+    const resolvedBase = path.resolve(library.path);
     if (!(await this.directoryExists(resolvedBase))) {
-      console.log(`⚠️ ${type} directory does not exist: ${resolvedBase}`);
+      console.log(`⚠️ Library "${library.name}" is missing: ${resolvedBase}`);
       return;
     }
 
     const entries = await fs.readdir(resolvedBase, { withFileTypes: true });
-
     for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      // "artists_x" / "characters_x" say their own type, so a folder shared
-      // by both storage paths lists each dataset once, under the right type.
-      // Unprefixed folders take the type of the path they're in.
+      if (!entry.isDirectory() || entry.name === 'bak') continue;
+      // "artists_x" / "characters_x" say their own type; unprefixed folders
+      // take the library's old type (see utils/datasetLibraries.js).
       const parsed = parseDatasetFolderName(entry.name);
-      if (parsed.type && parsed.type !== type) continue;
+      const type = datasetType(library, entry.name);
 
       const folderPath = path.join(resolvedBase, entry.name);
       const normalizedFolderPath = path.normalize(folderPath);
@@ -799,12 +772,12 @@ class TagEditorIPC {
         id: `${type}:${normalizedFolderPath}`,
         name: parsed.name,
         displayName: parsed.name,
-        folderName: this.buildFolderIdentifier(normalizedFolderPath, storageConfig),
+        folderName: entry.name,
         type,
         fileCount: files.length,
         path: folderPath,
-        storageLabel: label,
-        isCustomStorage: !!isCustom,
+        storageLabel: library.name,
+        libraryId: library.id,
         basePath: resolvedBase,
         lastModified: await this.getLastModifiedTime(folderPath)
       });

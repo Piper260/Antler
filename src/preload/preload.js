@@ -160,7 +160,6 @@ const electronAPI = {
       getDownloadStats: () => safeInvoke('utils:get-download-stats'),
       openExternal: (url) => safeInvoke('utils:open-external', url),
       showInFolder: (filePath) => safeInvoke('utils:show-in-folder', filePath),
-      getStoragePaths: () => safeInvoke('utils:getStoragePaths'),
       resizeSaveImage: (filePath, buffer) => safeInvoke('utils:resize-save-image', { filePath, buffer }),
       scanImageFolder: (folderPath) => safeInvoke('utils:scan-image-folder', folderPath),
       readImageFile: (filePath) => safeInvoke('utils:read-image-file', filePath),
@@ -267,6 +266,13 @@ const electronAPI = {
     keep: (filePath, tryFile, options) => safeInvoke('cleanup:keep', filePath, tryFile, options),
     discard: (filePath) => safeInvoke('cleanup:discard', filePath),
     onProgress: (callback) => safeOn('cleanup:progress', callback)
+  },
+
+  // Dataset libraries (Settings > Storage)
+  storage: {
+    getLibraries: () => safeInvoke('storage:get-libraries'),
+    saveLibraries: (libraries, defaultId) => safeInvoke('storage:save-libraries', libraries, defaultId),
+    openLibrary: (id) => safeInvoke('storage:open-library', id)
   },
 
   // Model downloads (Settings > Models and the first-run prompt)

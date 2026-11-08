@@ -45,11 +45,16 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: antler-${{ matrix.name }}
+          # The installers and checksums, plus what installed copies read to
+          # update themselves: latest*.yml and the blockmaps (Windows
+          # downloads only the changed parts of a new version).
           path: |
             dist/*.exe
             dist/*.dmg
             dist/*.AppImage
             dist/*.sha256
+            dist/latest*.yml
+            dist/*.blockmap
           if-no-files-found: error
 
   release:

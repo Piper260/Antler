@@ -14,7 +14,7 @@ const E621Service = require('./services/E621Service');
 const E621IPC = require('./ipc/E621IPC');
 const UtilsIPC = require('./ipc/UtilsIPC');
 const TagEditorIPC = require('./ipc/TagEditorIPC');
-const UpdateService = require('./services/UpdateService');
+const { UpdateService } = require('./services/UpdateService');
 const UpdateIPC = require('./ipc/UpdateIPC');
 const AIService = require('./services/AIService');
 const AIHandlers = require('./ipc/AIHandlers');
@@ -321,7 +321,10 @@ app.whenReady().then(async () => {
   
   // Set up services
   await setupServices();
-  
+
+  // Look for new versions in the background (installed builds only).
+  updateService.start();
+
   console.log('✅ Application ready');
 });
 

@@ -1,54 +1,35 @@
-const { ipcMain, shell } = require('electron');
-const { requireWebUrl } = require('../utils/pathGuard');
+// src/main/ipc/UpdateIPC.js - update status, check, install, release page
+const { BrowserWindow, ipcMain, shell } = require('electron');
+const { RELEASES_URL } = require('../services/UpdateService');
 
 class UpdateIPC {
   constructor(updateService) {
     this.updateService = updateService;
-    this.setupHandlers();
-    console.log('🔄 Update IPC handlers registered');
-  }
 
-  setupHandlers() {
-    // Check for updates manually
+    // Every status change goes to every open window.
+    updateService.onStatus((status) => {
+      for (const window of BrowserWindow.getAllWindows()) {
+        if (!window.isDestroyed()) window.webContents.send('update:status', status);
+      }
+    });
+
+    ipcMain.handle('update:get-status', () => ({ success: true, status: this.updateService.status }));
+
     ipcMain.handle('update:check', async () => {
       try {
-        const result = await this.updateService.checkForUpdates();
-        return { success: true, update: result };
+        return { success: true, status: await this.updateService.check() };
       } catch (error) {
-        console.error('❌ Update check failed:', error);
         return { success: false, message: error.message };
       }
     });
 
-    // Test update notification (simulates finding an update)
-    ipcMain.handle('update:test-notification', async () => {
-      console.log('🧪 Testing update notification...');
-      return {
-        success: true,
-        update: {
-          available: true,
-          type: 'commit',
-          shortHash: 'abc1234',
-          message: 'Test update: Added new features and bug fixes',
-          date: new Date().toISOString(),
-          author: 'Piper260',
-          url: 'https://github.com/Piper260/Antler'
-        }
-      };
-    });
+    ipcMain.handle('update:install', () => ({ success: this.updateService.install() }));
 
-    // Open update URL in browser
-    ipcMain.handle('update:open-url', async (event, url) => {
-      try {
-        if (url) {
-                    await shell.openExternal(requireWebUrl(url));
-          return { success: true };
-        }
-        return { success: false, message: 'No URL provided' };
-      } catch (error) {
-        console.error('❌ Failed to open URL:', error);
-        return { success: false, message: error.message };
-      }
+    // Only ever opens Antler's own releases page.
+    ipcMain.handle('update:open-release', async () => {
+      const url = this.updateService.status.releaseUrl || RELEASES_URL;
+      await shell.openExternal(url.startsWith('https://github.com/Piper260/Antler/') ? url : RELEASES_URL);
+      return { success: true };
     });
   }
 }

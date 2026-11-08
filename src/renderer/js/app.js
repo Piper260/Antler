@@ -49,6 +49,7 @@ class AntlerApp {
 
       // Offer the models to a new user; failures here never block the app.
       this.setupModels().catch(error => console.error('Model check failed:', error));
+      this.setupUpdates().catch(error => console.error('Update setup failed:', error));
 
     } catch (error) {
       console.error('❌ Failed to initialize application:', error);
@@ -1018,93 +1019,10 @@ class AntlerApp {
     };
     return icons[type] || icons.info;
   }
-
-  /**
-   * Check for application updates
-   */
-  async checkForUpdates(manual = false, showIfAvailable = false) {
-    if (manual) {
-      console.log('🔄 Checking for updates...');
-      this.showToast('Checking for updates...', 'info');
-    }
-
-    try {
-      if (window.electronAPI.update && window.electronAPI.update.checkForUpdates) {
-        const result = await window.electronAPI.update.checkForUpdates();
-        
-        if (result.success && result.update && result.update.available) {
-          console.log('✨ Update available:', result.update);
-          if (manual || showIfAvailable) {
-            this.showUpdateNotification(result.update);
-          }
-        } else if (manual) {
-          this.showToast('No updates available. You are on the latest version.', 'success');
-        }
-      } else {
-        console.warn('⚠️ Update API not available');
-        if (manual) {
-          this.showToast('Update check not supported in this environment', 'warning');
-        }
-      }
-    } catch (error) {
-      console.error('❌ Error checking for updates:', error);
-      if (manual) {
-        this.showToast('Failed to check for updates', 'error');
-      }
-    }
-  }
-
-  showUpdateNotification(updateInfo) {
-    // Create a special toast or modal for updates
-    const message = `Update available: ${updateInfo.type === 'release' ? updateInfo.version : 'New Commit'}`;
-    
-    const toast = document.createElement('div');
-    toast.className = 'toast toast-info update-toast';
-
-    toast.innerHTML = `
-      <div class="toast-content">
-        <i class="fas fa-cloud-download-alt"></i>
-        <div class="toast-message">
-            <div class="toast-title">Update available</div>
-            <div class="toast-desc">${message}</div>
-        </div>
-      </div>
-      <div class="toast-actions">
-        <button class="btn btn-sm btn-secondary" id="dismiss-update-btn">Dismiss</button>
-        <button class="btn btn-sm btn-primary" id="view-update-btn">View</button>
-      </div>
-    `;
-
-    this.toastContainer.appendChild(toast);
-    
-    // Add event listeners
-    const viewBtn = toast.querySelector('#view-update-btn');
-    const dismissBtn = toast.querySelector('#dismiss-update-btn');
-    
-    if (viewBtn) {
-      viewBtn.addEventListener('click', () => {
-        if (updateInfo.url) {
-            window.electronAPI.utils.openExternal(updateInfo.url);
-        }
-      });
-    }
-    
-    if (dismissBtn) {
-      dismissBtn.addEventListener('click', () => {
-        toast.classList.remove('show');
-        setTimeout(() => {
-            if (toast.parentNode) toast.parentNode.removeChild(toast);
-        }, 400);
-      });
-    }
-
-    // Show toast
-    setTimeout(() => toast.classList.add('show'), 100);
-  }
 }
 
 // The page methods live in js/app/ (loaded before this file).
-mixMethods(AntlerApp, AppPageTemplates, AppInfoPages, AppSettingsPage, AppModels);
+mixMethods(AntlerApp, AppPageTemplates, AppInfoPages, AppSettingsPage, AppModels, AppUpdates);
 
 /**
  * Initialize the application when DOM is ready

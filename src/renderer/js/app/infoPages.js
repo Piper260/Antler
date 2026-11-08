@@ -264,20 +264,7 @@ setupAboutEventListeners() {
   // Check for updates button
   const checkUpdatesBtn = document.getElementById('check-updates-btn');
   if (checkUpdatesBtn) {
-    checkUpdatesBtn.addEventListener('click', async (e) => {
-      // Ctrl+Click for test notification
-      if (e.ctrlKey) {
-        e.preventDefault();
-        console.log('🧪 Testing update notification...');
-        const result = await window.electronAPI.update.testNotification();
-        if (result.success && result.update) {
-          this.showUpdateNotification(result.update);
-        }
-      } else {
-        // Normal click for real check
-        this.checkForUpdates(true);
-      }
-    });
+    checkUpdatesBtn.addEventListener('click', () => this.checkForUpdates());
   }
 }
 

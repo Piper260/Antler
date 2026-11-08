@@ -105,9 +105,11 @@ const electronAPI = {
 
   // Update API
   update: {
+    getStatus: () => safeInvoke('update:get-status'),
     checkForUpdates: () => safeInvoke('update:check'),
-    testNotification: () => safeInvoke('update:test-notification'),
-    openUrl: (url) => safeInvoke('update:open-url', url)
+    install: () => safeInvoke('update:install'),
+    openRelease: () => safeInvoke('update:open-release'),
+    onStatus: (callback) => safeOn('update:status', callback)
   },
 
   // AI API

@@ -135,17 +135,26 @@ You can also place model files by hand in `resources/models/` (in a source check
 
 ### Publishing a release
 
-Bump `version` in `package.json`, commit, then push a tag:
+From an up-to-date `main` with everything committed:
 
 ```bash
-git tag v1.0.1
+npm run release
 ```
 
-```bash
-git push origin v1.0.1
-```
+That runs the tests, bumps the patch version (1.0.1 to 1.0.2), commits and tags it, and pushes. Use `npm run release -- minor` or `-- major` for bigger steps, or `-- 1.4.0` for a specific version. Passing the current version tags it without a bump, for the first release.
 
-The [Release workflow](.github/workflows/release.yml) builds the Windows installer, the macOS `.dmg` and the Linux AppImage, each on its own runner, and publishes them with their `.sha256` files as a GitHub Release. Each build carries only its own platform's binaries. To check the builds without publishing, run the workflow by hand from the Actions tab.
+The tag starts the [Release workflow](.github/workflows/release.yml), which builds the Windows installer, the macOS `.dmg` and the Linux AppImage, each on its own runner, and publishes them as a GitHub Release with their `.sha256` files and the update metadata. Each build carries only its own platform's binaries. To check the builds without publishing, run the workflow by hand from the Actions tab.
+
+### How updates reach users
+
+| System | What happens |
+| --- | --- |
+| Windows | Antler checks on launch and every 6 hours, downloads the new version in the background (only the changed parts), then offers **Restart now**. If the user picks **Later**, it installs the next time Antler quits. |
+| Linux (AppImage) | The same, replacing the AppImage. |
+| macOS | Antler says a new version is out and links to the release. macOS doesn't let unsigned apps replace themselves. |
+| From source | No automatic updates; use `git pull`. |
+
+Users can also check any time from **About > Check for updates**.
 
 ### Building locally
 

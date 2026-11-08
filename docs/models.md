@@ -33,7 +33,7 @@ allows this with credit.
 4. Create the repo once, then upload:
 
    ```bash
-   hf repo create Piper260/antler-models --repo-type model
+   hf repos create Piper260/antler-models --repo-type model
    hf upload Piper260/antler-models resources/models . --include "tagger/hydra-*"
    ```
 

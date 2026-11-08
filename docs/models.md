@@ -10,11 +10,11 @@ downloads it from the author's own Hugging Face repo, pinned to a commit
 (the `source` on each file). That covers UltraSharp V2, the Inkwell panel
 detector, the comic bubble detector and Z3D.
 
-Hydra 3.5 and JTP PILOT2 are only published as PyTorch weights, so Antler
-uses its own ONNX conversions, hosted at `Piper260/antler-models`. Both are
-Apache-2.0, which allows this with credit.
+Hydra 3.5 is only published as PyTorch weights, so Antler uses its own ONNX
+conversion, hosted at `PIper260/antler-models`. Hydra is Apache-2.0, which
+allows this with credit.
 
-## Publishing the Hydra and JTP conversions (maintainer)
+## Publishing the Hydra conversion (maintainer)
 
 1. Put the model files in `resources/models/` (layout below).
 2. Refresh the manifest and commit it:
@@ -33,8 +33,8 @@ Apache-2.0, which allows this with credit.
 4. Create the repo once, then upload:
 
    ```bash
-   hf repo create Piper260/antler-models --repo-type model
-   hf upload Piper260/antler-models resources/models . --include "tagger/hydra-*" "tagger/jtp-pilot2*"
+   hf repo create PIper260/antler-models --repo-type model
+   hf upload PIper260/antler-models resources/models . --include "tagger/hydra-*"
    ```
 
 5. Check from a clean machine (or after deleting `%APPDATA%\antler\models`)
@@ -52,7 +52,6 @@ and run `npm run models:manifest`.
 
 ```
 tagger/hydra-tagger.onnx, hydra-tagger.onnx.data, hydra-tags.csv, hydra-cam.onnx
-tagger/jtp-pilot2.onnx, jtp-pilot2-tags.csv
 tagger/z3d-e621.onnx, z3d-e621-tags.csv
 comic/inkwell-panels.onnx, comic/comic-bubbles.onnx
 ultrasharp-v2-4x.onnx, ultrasharp-v2-lite-4x.onnx
@@ -60,10 +59,9 @@ ultrasharp-v2-4x.onnx, ultrasharp-v2-lite-4x.onnx
 
 ## Model card
 
-Give the Hugging Face repo a README that says these are ONNX conversions of
-RedRocket's Hydra 3.5 (https://huggingface.co/RedRocket/Hydra) and JTP PILOT2
-(https://huggingface.co/RedRocket/JointTaggerProject), both Apache-2.0, made
-for Antler, with a link back to each.
+Give the Hugging Face repo a README that says this is an ONNX conversion of
+RedRocket's Hydra 3.5 (https://huggingface.co/RedRocket/Hydra, Apache-2.0)
+made for Antler, with a link back to it.
 
 ## Where the app looks
 

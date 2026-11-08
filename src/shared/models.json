@@ -1,6 +1,6 @@
 {
-  "_comment": "Files with a 'source' download from the original author's Hugging Face repo, pinned to a commit. Files without one come from 'repo' (ONNX conversions Antler hosts because the original only publishes PyTorch weights). Sizes and sha256 are checked after download; refresh them with npm run models:manifest.",
-  "repo": "Piper260/antler-models",
+  "_comment": "Files with a 'source' download from the original author's Hugging Face repo, pinned to a commit. Files without one come from 'repo': Antler's ONNX conversion of Hydra, whose author only publishes PyTorch weights. Sizes and sha256 are checked after download; refresh them with npm run models:manifest.",
+  "repo": "PIper260/antler-models",
   "revision": "main",
   "packs": [
     {
@@ -115,35 +115,9 @@
       ]
     },
     {
-      "id": "jtp",
-      "name": "JTP PILOT2 tagger",
-      "description": "Older e621 tagger, used only when Hydra is missing.",
-      "recommended": false,
-      "credits": [
-        {
-          "name": "JTP PILOT2 by RedRocket",
-          "home": "RedRocket/JointTaggerProject",
-          "license": "Apache-2.0",
-          "note": "ONNX conversion hosted by Antler"
-        }
-      ],
-      "files": [
-        {
-          "path": "tagger/jtp-pilot2.onnx",
-          "size": 1796913431,
-          "sha256": "e1f62e85e7bf2e0ce482592c898dcedae201c873e8b276f219383bc9c4c38655"
-        },
-        {
-          "path": "tagger/jtp-pilot2-tags.csv",
-          "size": 194864,
-          "sha256": "6d8b7c38d9b5a5e222d72fb94cab4365beb6b0b948052fec218bab60a91ae61c"
-        }
-      ]
-    },
-    {
       "id": "z3d",
       "name": "Z3D e621 tagger",
-      "description": "Last-resort fallback tagger, used only when Hydra and JTP are missing.",
+      "description": "Fallback tagger, used only when Hydra is missing.",
       "recommended": false,
       "credits": [
         {

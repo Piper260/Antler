@@ -106,14 +106,13 @@ The taggers, detectors and ONNX upscalers are too large for git. Antler offers t
 | Hydra 3.5 tagger | 1.28 GB | Tag Editor, Comic Panels |
 | Comic panels and speech bubbles | 181 MB | Comic Panels, Image Cleanup |
 | UltraSharp V2 upscalers | 82 MB | Image Upscaler |
-| JTP PILOT2 tagger (optional) | 1.80 GB | Fallback when Hydra is missing |
-| Z3D tagger (optional) | 390 MB | Last-resort fallback |
+| Z3D tagger (optional) | 390 MB | Fallback when Hydra is missing |
 
-Where the original author publishes the ONNX file Antler uses, it is downloaded straight from the author's Hugging Face page; each model in the list links to its home and shows its license. Hydra and JTP are only published as PyTorch weights, so those two come from Antler's own ONNX conversions. UltraSharp V2 is licensed for non-commercial use only.
+Where the original author publishes the ONNX file Antler uses, it is downloaded straight from the author's Hugging Face page; each model in the list links to its home and shows its license. Hydra is only published as PyTorch weights, so it comes from Antler's own ONNX conversion. UltraSharp V2 is licensed for non-commercial use only.
 
 Downloads go to `%APPDATA%\antler\models\`, which survives reinstalls and updates. Each file is checked against its SHA-256 before use, and an interrupted download resumes where it stopped. The small ncnn upscalers ship with the app.
 
-If a model is missing, the tool that needs it says so and falls back where it can. Comic Panels uses gutter detection without its panel model, and JTP PILOT2 or Z3D can stand in for Hydra as the tagger.
+If a model is missing, the tool that needs it says so and falls back where it can. Comic Panels uses gutter detection without its panel model, and Z3D can stand in for Hydra as the tagger.
 
 You can also place model files by hand in `resources/models/` (in a source checkout) or in the AppData folder above. Maintainers: see [docs/models.md](docs/models.md) for publishing models.
 

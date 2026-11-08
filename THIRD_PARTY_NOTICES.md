@@ -23,8 +23,7 @@ chooses to, from the place shown.
 
 | Model | Author and home | License | Downloaded from |
 | --- | --- | --- | --- |
-| Hydra 3.5 tagger | RedRocket, https://huggingface.co/RedRocket/Hydra | Apache-2.0 | ONNX conversion at https://huggingface.co/Piper260/antler-models |
-| JTP PILOT2 tagger | RedRocket, https://huggingface.co/RedRocket/JointTaggerProject | Apache-2.0 | ONNX conversion at https://huggingface.co/Piper260/antler-models |
+| Hydra 3.5 tagger | RedRocket, https://huggingface.co/RedRocket/Hydra | Apache-2.0 | ONNX conversion at https://huggingface.co/PIper260/antler-models |
 | Inkwell panel detector | cedarrapidsboy, https://huggingface.co/cedarrapidsboy/inkwell-panel-models | See the model card | The author's repo |
 | Comic text and bubble detector | ogkalu, https://huggingface.co/ogkalu/comic-text-and-bubble-detector | Apache-2.0 | The author's repo |
 | UltraSharp V2 / V2 Lite | Kim2091, https://huggingface.co/Kim2091/UltraSharpV2 | CC BY-NC-SA 4.0 (non-commercial) | The author's repo |

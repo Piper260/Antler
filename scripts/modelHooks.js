@@ -8,22 +8,25 @@
  * resources/models only when it is new or has changed. Moving within the
  * same drive is instant.
  *
- * The installer leaves out every model listed in src/shared/models.json.
- * Antler offers to download those on first launch, from their authors'
- * pages or Antler's own ONNX conversions, so a public installer doesn't
- * redistribute anyone's model and stays small. Only the small ncnn
- * upscalers tracked in git ship with it. The portable folder keeps every
- * model, for personal use.
+ * The installer ships only the small ncnn upscalers tracked in git (the
+ * .param/.bin pairs in resources/models itself). Everything else, the ONNX
+ * taggers, detectors and upscalers, is left out: Antler offers to download
+ * them on first launch, so a public installer doesn't redistribute anyone's
+ * model and stays small. The portable folder keeps every model, for
+ * personal use.
  */
 const fs = require('fs');
 const path = require('path');
 
 const SOURCE = path.join(__dirname, '..', 'resources', 'models');
-const MANIFEST = require('../src/shared/models.json');
+
+/** Whether a file (relative to resources/models) goes into the installer. */
+function shipsWithInstaller(file) {
+  return path.dirname(file) === '.' && /\.(param|bin)$/i.test(file);
+}
+
 // Paths relative to resources/models, as listFiles() returns them.
-const INSTALLER_EXCLUDES = new Set(
-  MANIFEST.packs.flatMap(pack => pack.files.map(file => path.join(...file.path.split('/'))))
-);
+const INSTALLER_EXCLUDES = new Set(listFiles(SOURCE).filter(file => !shipsWithInstaller(file)));
 
 const cacheDir = (context) => path.join(context.outDir, '.model-cache');
 const modelsDir = (context) => path.join(context.appOutDir, 'resources', 'models');

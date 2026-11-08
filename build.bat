@@ -32,7 +32,7 @@ if not exist "node_modules\electron-builder" (
 
 echo.
 echo Select build type:
-echo   [1] Installer       - a setup .exe; leaves out the 1.8 GB JTP tagger model
+echo   [1] Installer       - a setup .exe; models download on first launch
 echo   [2] Portable folder - dist\win-unpacked, with every model
 echo   [3] Both
 echo.
@@ -44,7 +44,7 @@ set "failed=0"
 if "!choice!"=="1" call :Build
 if "!choice!"=="2" call :Build --dir
 if "!choice!"=="3" (
-    rem The installer build rewrites dist\win-unpacked without JTP, so it goes first.
+    rem The installer build rewrites dist\win-unpacked without the ONNX models, so it goes first.
     call :Build
     if "!failed!"=="0" call :Build --dir
 )

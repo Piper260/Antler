@@ -1,0 +1,428 @@
+/* Image Upscaler - tool-specific parts. Layout shared with the Image
+   Resizer lives in image-batch.css. */
+
+.iu-backend-fallback {
+  color: var(--warning);
+}
+
+.iu-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.iu-filter .form-select {
+  width: 170px;
+}
+
+/* Model / scale / format settings */
+.iu-options {
+  display: grid;
+  flex-shrink: 0;
+  grid-template-columns: minmax(260px, 2fr) repeat(5, minmax(80px, 0.5fr));
+  gap: 12px;
+  padding: 10px var(--page-pad) 12px;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.iu-option {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.iu-option > span {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.iu-model-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.iu-model-row .form-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.iu-fav-btn {
+  width: var(--control-h);
+  height: var(--control-h);
+  color: var(--text-disabled);
+}
+
+.iu-fav-btn.is-favorite {
+  color: var(--accent-primary);
+}
+
+/* Size status in a row: where the image stands against the longest-side target. */
+.iu-size {
+  margin-left: 6px;
+}
+
+.iu-size-needs {
+  color: var(--warning);
+}
+
+.iu-size-ok,
+.iu-size-note {
+  color: var(--text-tertiary);
+}
+
+.iu-row-output {
+  overflow: hidden;
+  font-size: var(--text-xs);
+  color: var(--text-disabled);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iu-row-output:empty {
+  display: none;
+}
+
+.iu-list-empty {
+  padding: 48px var(--page-pad);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+/* Before / after comparison */
+.iu-compare-backdrop,
+.iu-grid-backdrop {
+  position: absolute;
+  inset: 0;
+}
+
+.iu-compare-content,
+.iu-grid-content {
+  position: relative;
+  height: 100%;
+}
+
+.iu-compare-content {
+  max-width: 1100px;
+  max-height: 800px;
+}
+
+.iu-grid-content {
+  max-width: 1300px;
+  max-height: 820px;
+}
+
+.iu-compare-body {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  background: var(--bg-primary);
+}
+
+.iu-compare-slider {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  user-select: none;
+}
+
+.iu-compare-scroll {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  overflow: auto;
+  cursor: ew-resize;
+  touch-action: none;
+  overscroll-behavior: contain;
+}
+
+.iu-compare-scroll.is-panning {
+  cursor: grabbing;
+}
+
+.iu-compare-stage {
+  position: relative;
+  flex: none;
+  margin: auto;
+  background: var(--bg-primary);
+}
+
+.iu-compare-img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-primary);
+  pointer-events: none;
+}
+
+.iu-compare-before-wrap {
+  position: absolute;
+  inset: 0;
+  clip-path: inset(0 50% 0 0);
+}
+
+.iu-compare-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  z-index: 2;
+  width: 24px;
+  transform: translateX(-50%);
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.iu-compare-handle-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.iu-compare-handle-grip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  color: #17181a;
+  font-size: 8px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.iu-compare-label {
+  position: absolute;
+  top: 8px;
+  z-index: 3;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.65);
+  font-size: var(--text-sm);
+  color: #ffffff;
+  pointer-events: none;
+}
+
+.iu-compare-label-before {
+  left: 8px;
+}
+
+.iu-compare-label-after {
+  right: 8px;
+}
+
+.iu-compare-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: var(--scrim);
+}
+
+.iu-compare-footer {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 16px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--border-primary);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.iu-compare-footer-sep {
+  display: none;
+}
+
+.iu-compare-hint {
+  margin-left: auto;
+  color: var(--text-tertiary);
+}
+
+/* Compare all models */
+.iu-grid-toolbar {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.iu-grid-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.iu-grid-toolbar-group label i {
+  display: none;
+}
+
+.iu-grid-toolbar-group input[type="range"] {
+  accent-color: var(--accent-primary);
+}
+
+.iu-grid-toolbar-hint {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.iu-grid-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 16px 16px;
+}
+
+.iu-grid-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+
+.iu-grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.iu-grid-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.iu-grid-card-error {
+  opacity: 0.7;
+}
+
+.iu-grid-thumb-wrap {
+  width: 100%;
+  aspect-ratio: 1;
+  margin-bottom: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+}
+
+.iu-grid-thumb {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.iu-grid-thumb-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--error);
+}
+
+.iu-grid-sync-tile {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.iu-grid-sync-img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: var(--iu-sync-px) var(--iu-sync-py);
+  transform: scale(var(--iu-sync-zoom));
+  transform-origin: var(--iu-sync-px) var(--iu-sync-py);
+  pointer-events: none;
+}
+
+.iu-grid-sync-after-wrap {
+  position: absolute;
+  inset: 0;
+  clip-path: inset(0 calc(100% - var(--iu-sync-pct)) 0 0);
+}
+
+.iu-grid-sync-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--iu-sync-pct);
+  width: 1px;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.iu-grid-card-label {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iu-grid-card-dims {
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+}
+
+.iu-grid-card-err-msg {
+  color: var(--error);
+}
+
+.iu-grid-view-btn {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+@media (max-width: 1000px) {
+  .iu-options {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .iu-option:first-child {
+    grid-column: 1 / -1;
+  }
+}

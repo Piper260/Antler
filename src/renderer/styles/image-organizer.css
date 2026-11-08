@@ -1,0 +1,363 @@
+/* Image Organizer - tool layout. Shared controls come from components.css. */
+
+.imo-tool {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Folder picker shown before anything is loaded */
+.imo-setup {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  margin: var(--page-pad);
+  border: 1px dashed var(--border-hover);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.imo-setup:hover {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+}
+
+.imo-setup-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 460px;
+  padding: 24px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.imo-setup-icon {
+  margin-bottom: 4px;
+  font-size: 20px;
+  color: var(--text-tertiary);
+}
+
+.imo-setup-title {
+  font-size: var(--text-lg);
+}
+
+.imo-setup-sub {
+  color: var(--text-tertiary);
+}
+
+.imo-browse-btn {
+  margin-top: 10px;
+  pointer-events: all;
+}
+
+/* Workspace */
+.imo-workspace {
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.imo-toolbar,
+.imo-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 10px var(--page-pad);
+}
+
+.imo-toolbar {
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.imo-footer {
+  border-top: 1px solid var(--border-primary);
+}
+
+.imo-toolbar-info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.imo-toolbar-sep {
+  display: none;
+}
+
+.imo-folder-label {
+  max-width: 360px;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.imo-toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.imo-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.imo-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  color: var(--text-tertiary);
+}
+
+.imo-empty i {
+  font-size: 20px;
+}
+
+/* One row per image */
+.imo-row {
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.imo-row-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 5px var(--page-pad);
+}
+
+.imo-row-main:hover {
+  background: var(--bg-secondary);
+}
+
+.imo-row-icon {
+  display: none;
+}
+
+.imo-row-info {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: 240px;
+  min-width: 0;
+}
+
+.imo-row-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.imo-row-meta,
+.imo-row-subfolder {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.imo-row-artist {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.imo-artist-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.imo-artist-select {
+  flex-shrink: 0;
+  width: auto;
+  max-width: 220px;
+}
+
+.imo-row-detail {
+  padding: 6px var(--page-pad) 10px;
+  border-top: 1px solid var(--border-secondary);
+  background: var(--bg-secondary);
+  user-select: text;
+}
+
+.imo-detail-section {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: var(--text-sm);
+}
+
+.imo-detail-label {
+  flex-shrink: 0;
+  min-width: 76px;
+  color: var(--text-tertiary);
+}
+
+.imo-detail-value {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.imo-detail-params {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.imo-no-meta {
+  color: var(--text-tertiary);
+}
+
+/* Detected metadata. Kind is shown by the label in front of the row, so
+   every tag uses the same neutral chip. */
+.imo-tag,
+.imo-lora-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.imo-tag-artist {
+  border-color: var(--accent-primary);
+}
+
+.imo-tag-lora-off {
+  color: var(--text-disabled);
+  text-decoration: line-through;
+}
+
+.imo-lora-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* LoRA chips are toggles: selected ones are filled. */
+.imo-lora-chip {
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.imo-lora-chip:hover {
+  border-color: var(--border-hover);
+}
+
+.imo-lora-chip-active {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-muted);
+}
+
+.imo-lora-chip-off {
+  background: transparent;
+  color: var(--text-disabled);
+}
+
+.imo-params-pre {
+  max-height: 140px;
+  overflow-y: auto;
+  padding: 6px 8px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Output settings */
+.imo-footer-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.imo-footer-label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.imo-output-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.imo-output-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.imo-footer-right {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 16px;
+}
+
+.imo-mode-toggle {
+  display: flex;
+  gap: 14px;
+}
+
+.imo-radio-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+/* Busy overlay */
+.imo-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--scrim);
+}
+
+.imo-overlay-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 28px;
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-lg);
+}
+
+.imo-overlay-icon {
+  font-size: 18px;
+  color: var(--text-secondary);
+}

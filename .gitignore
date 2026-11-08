@@ -1,0 +1,22 @@
+node_modules/
+dist/
+logs/
+coverage/
+
+# Local settings and editor/tool state
+.env
+.env.*
+.claude/
+.impeccable/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Model files are too large for git. They are hosted on Hugging Face (see
+# src/shared/models.json and docs/models.md); the small ncnn upscalers
+# already tracked stay tracked.
+resources/models/tagger/
+resources/models/comic/
+resources/models/*.onnx
+*.part

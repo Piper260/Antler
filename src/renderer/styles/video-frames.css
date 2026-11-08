@@ -1,0 +1,90 @@
+/* Video Frames - tool-specific parts. The drop zone, workspace and toolbar
+   come from image-batch.css. */
+
+.vf-options {
+  display: grid;
+  flex-shrink: 0;
+  grid-template-columns: minmax(100px, 0.6fr) minmax(180px, 1.2fr) minmax(90px, 0.5fr) minmax(280px, 2fr);
+  gap: 12px;
+  padding: 10px var(--page-pad) 12px;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.vf-option {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.vf-option > span {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.vf-folder-row {
+  display: flex;
+  gap: 8px;
+}
+
+.vf-folder-row .form-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.vf-grid {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  grid-auto-rows: min-content;
+  gap: 10px;
+  min-height: 0;
+  padding: 12px var(--page-pad);
+  overflow-y: auto;
+}
+
+.vf-tile {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  cursor: pointer;
+}
+
+.vf-tile:hover {
+  border-color: var(--border-hover);
+}
+
+.vf-tile img {
+  width: 100%;
+  height: 130px;
+  object-fit: contain;
+  background: var(--bg-primary);
+}
+
+.vf-tile-off img {
+  opacity: 0.35;
+}
+
+.vf-tile-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 1000px) {
+  .vf-options {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .vf-option-folder {
+    grid-column: 1 / -1;
+  }
+}

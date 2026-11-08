@@ -1,0 +1,314 @@
+/* Shared layout for the Image Resizer (ir-) and Image Upscaler (iu-).
+   Both tools have the same structure: a drop zone with a dataset picker,
+   then a toolbar above a list of image rows. Comic Panels (cp-) shares the
+   drop zone only; Video Frames (vf-) shares the drop zone and toolbar;
+   Image Cleanup (ic-) shares the drop zone. */
+
+.ir-tool,
+.iu-tool,
+.vf-tool {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Drop zone */
+.ir-dropzone,
+.iu-dropzone,
+.cp-dropzone,
+.vf-dropzone,
+.ic-dropzone {
+  display: flex;
+  flex: 1;
+  margin: var(--page-pad);
+  overflow-y: auto;
+  border: 1px dashed var(--border-hover);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.ir-dropzone:hover,
+.ir-dropzone.drag-over,
+.iu-dropzone:hover,
+.cp-dropzone:hover,
+.vf-dropzone:hover,
+.ic-dropzone:hover,
+.iu-dropzone.drag-over,
+.cp-dropzone.drag-over,
+.vf-dropzone.drag-over,
+.ic-dropzone.drag-over {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+}
+
+.ir-dropzone-inner,
+.iu-dropzone-inner,
+.cp-dropzone-inner,
+.vf-dropzone-inner,
+.ic-dropzone-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  max-width: 400px;
+  margin: auto;
+  padding: 24px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.ir-drop-icon,
+.iu-drop-icon,
+.cp-drop-icon,
+.vf-drop-icon,
+.ic-drop-icon {
+  margin-bottom: 4px;
+  font-size: 20px;
+  color: var(--text-tertiary);
+}
+
+.ir-drop-title,
+.iu-drop-title,
+.cp-drop-title,
+.vf-drop-title,
+.ic-drop-title {
+  font-size: var(--text-lg);
+}
+
+.ir-drop-sub,
+.iu-drop-sub,
+.cp-drop-sub,
+.vf-drop-sub,
+.ic-drop-sub {
+  color: var(--text-tertiary);
+}
+
+.ir-drop-actions,
+.iu-drop-actions,
+.cp-drop-actions,
+.vf-drop-actions,
+.ic-drop-actions {
+  margin-top: 10px;
+  pointer-events: all;
+}
+
+.ir-dataset-picker,
+.iu-dataset-picker,
+.cp-dataset-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 18px;
+  pointer-events: all;
+}
+
+.ir-dataset-divider,
+.iu-dataset-divider,
+.cp-dataset-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.ir-dataset-divider::before,
+.ir-dataset-divider::after,
+.iu-dataset-divider::before,
+.cp-dataset-divider::before,
+.iu-dataset-divider::after,
+.cp-dataset-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-primary);
+}
+
+.ir-dataset-select,
+.iu-dataset-select,
+.cp-dataset-select {
+  width: 100%;
+}
+
+/* Workspace */
+.ir-workspace,
+.iu-workspace,
+.vf-workspace {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.ir-toolbar,
+.iu-toolbar,
+.vf-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 10px var(--page-pad);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.ir-toolbar-info,
+.iu-toolbar-info,
+.vf-toolbar-info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.ir-toolbar-sep {
+  display: none;
+}
+
+.ir-toolbar-actions,
+.iu-toolbar-actions,
+.vf-toolbar-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ir-select-all-wrap,
+.iu-select-all-wrap,
+.vf-select-all-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+/* Image rows */
+.ir-list,
+.iu-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.ir-row,
+.iu-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px var(--page-pad);
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.ir-row:hover,
+.iu-row:hover {
+  background: var(--bg-secondary);
+}
+
+.ir-row-check-wrap,
+.iu-row-check-wrap {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.ir-thumb-wrap,
+.iu-thumb-wrap {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+}
+
+.ir-thumb,
+.iu-thumb {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ir-row-info,
+.iu-row-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ir-row-name,
+.iu-row-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ir-row-dims,
+.iu-row-dims {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+}
+
+.ir-dim-arrow,
+.iu-dim-arrow {
+  font-size: 9px;
+  color: var(--text-disabled);
+}
+
+.ir-dim-new,
+.iu-dim-new {
+  color: var(--text-secondary);
+}
+
+/* Row state, shown as a coloured word. */
+.ir-row-badge,
+.iu-row-badge {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.ir-badge,
+.iu-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.ir-badge i:not(.fa-spinner),
+.iu-badge i:not(.fa-spinner) {
+  display: none;
+}
+
+.ir-badge-proc,
+.iu-badge-proc {
+  color: var(--text-primary);
+}
+
+.ir-badge-done,
+.iu-badge-done {
+  color: var(--success);
+}
+
+.ir-badge-err,
+.iu-badge-err {
+  color: var(--error);
+}

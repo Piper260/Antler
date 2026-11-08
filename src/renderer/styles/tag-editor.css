@@ -1,0 +1,549 @@
+/* Tag Editor - tool layout. Shared controls come from components.css. */
+
+.te-tool {
+  min-height: 0;
+}
+
+/* Dataset picker */
+.te-bar {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 12px;
+  padding: 12px var(--page-pad);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.te-dataset-select {
+  flex: 1;
+  max-width: 480px;
+}
+
+.te-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.te-toolbar {
+  flex-shrink: 0;
+  padding: 10px var(--page-pad);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.te-dataset-name {
+  font-weight: 600;
+}
+
+.te-tag-filter {
+  width: 200px;
+}
+
+.te-filter {
+  width: 170px;
+}
+
+.te-size {
+  width: 96px;
+}
+
+/* File grid */
+.te-grid {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(auto-fill, minmax(var(--te-card-min, 168px), 1fr));
+  /* The grid has a fixed height and scrolls; with plain auto rows the
+     browser shares that height out among all the rows (the cards' overflow
+     lets them shrink), squashing every card in a large dataset. */
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px var(--page-pad);
+}
+
+.te-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.te-card:hover {
+  border-color: var(--border-hover);
+}
+
+.te-card-thumb {
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+  /* Square box that does not depend on the image having loaded. */
+  height: 0;
+  padding-bottom: 100%;
+  background: var(--bg-tertiary);
+}
+
+.te-card-thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.te-card-body {
+  padding: 7px 9px 8px;
+  border-top: 1px solid var(--border-primary);
+}
+
+.te-card-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.te-card-meta {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 4px;
+  min-height: 18px;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.te-card-folder {
+  margin-left: auto;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Inline status words. Colour carries the meaning; there are no badges. */
+.te-flag-accent,
+.te-flag-warn,
+.te-flag-error {
+  font-size: var(--text-sm);
+  font-weight: 400;
+}
+
+.te-flag-accent { color: var(--accent-primary); }
+.te-flag-warn { color: var(--warning); }
+.te-flag-error { color: var(--error); }
+
+/* File editor */
+.te-editor {
+  max-width: 1180px;
+  height: 100%;
+  max-height: 780px;
+}
+
+.te-editor-nav {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.te-editor-nav .toolbar-text {
+  margin-right: 6px;
+}
+
+.te-editor-body {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 460px);
+  min-height: 0;
+}
+
+.te-editor-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 12px;
+  background: var(--bg-primary);
+  border-right: 1px solid var(--border-primary);
+}
+
+.te-editor-image {
+  position: relative;
+}
+
+.te-editor-image img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Hydra heatmap: one cell per 16px patch, laid over the image and blended
+   between cells by the browser's scaling */
+.te-heatmap {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Greyed under a heatmap so its colours read, as in Hydra's demo */
+.te-editor-image img.is-under-heatmap {
+  filter: grayscale(0.7) brightness(0.85);
+}
+
+.te-editor-side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  padding: 12px;
+}
+
+.te-editor-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.te-editor-add {
+  display: flex;
+  gap: 8px;
+}
+
+.te-editor-add .form-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.te-tags {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 4px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.te-tags-empty {
+  font-size: var(--text-sm);
+  color: var(--text-disabled);
+}
+
+.te-tag {
+  display: inline-flex;
+  align-items: stretch;
+  max-width: 100%;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  font-size: var(--text-sm);
+  line-height: 22px;
+}
+
+.te-tag.is-protected {
+  border-color: var(--accent-primary);
+}
+
+.te-tag-text {
+  overflow: hidden;
+  padding: 0 2px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: text;
+}
+
+.te-tag-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-disabled);
+  font-size: 10px;
+  cursor: pointer;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.te-tag-btn:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.te-tag.is-protected .te-tag-protect {
+  color: var(--accent-primary);
+}
+
+.te-tag-remove:hover {
+  color: var(--error);
+}
+
+/* Hydra scores and suggestions */
+.te-tag-score {
+  width: auto;
+  padding: 0 5px;
+  border-left: 1px solid var(--border-primary);
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.te-tag.is-doubtful {
+  border-color: var(--warning);
+}
+
+.te-tag.is-doubtful .te-tag-score {
+  color: var(--warning);
+}
+
+.te-tag.is-mapped {
+  border-color: var(--accent-primary);
+}
+
+.te-tag.is-mapped .te-tag-score {
+  color: var(--accent-primary);
+}
+
+.te-hydra {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-primary);
+}
+
+.te-hydra-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.te-hydra-heatmap-note {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.te-tags.te-hydra-suggest {
+  flex: none;
+  max-height: 180px;
+}
+
+/* Dataset-wide tag list */
+.te-global {
+  max-width: 880px;
+  height: 100%;
+  max-height: 760px;
+}
+
+.te-global-toolbar {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.te-global-search {
+  width: 220px;
+}
+
+.te-global-sort {
+  width: 120px;
+}
+
+.te-global-list,
+.te-suggestions-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.te-cell-tag {
+  max-width: 340px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: text;
+}
+
+.te-cell-actions {
+  width: 1%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.te-cell-reason {
+  color: var(--text-secondary);
+}
+
+/* Hydra column in All Tags: only once some files are scanned */
+.te-col-hydra {
+  display: none;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+table.has-hydra .te-col-hydra {
+  display: table-cell;
+}
+
+.te-cell-muted {
+  color: var(--text-disabled);
+}
+
+.te-link {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.te-cell-empty {
+  padding: 24px 12px;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.te-coverage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.te-coverage .progress-bar-container {
+  width: 120px;
+}
+
+.te-coverage span {
+  width: 44px;
+}
+
+/* Removal suggestions */
+.te-suggestions {
+  max-width: 720px;
+  max-height: 640px;
+}
+
+.te-suggestions-summary {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-primary);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/* Tag with Hydra */
+.te-batch {
+  max-width: 760px;
+  height: 100%;
+  max-height: 760px;
+}
+
+.te-batch-toolbar,
+.te-batch-options,
+.te-batch-summary {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.te-batch-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  font-size: var(--text-sm);
+}
+
+.te-batch-toolbar .form-select {
+  width: auto;
+  min-width: 200px;
+}
+
+.te-batch-options .te-batch-mode {
+  width: auto;
+}
+
+.te-batch-threshold {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.te-batch-threshold .form-input {
+  width: 76px;
+}
+
+.te-batch-categories {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.te-batch-categories label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.te-batch-summary {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.te-batch-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.te-batch .modal-footer .toolbar-text {
+  min-width: 0;
+  white-space: normal;
+}
+
+.te-batch-check {
+  width: 32px;
+}
+
+.te-batch-list tr.is-excluded td:not(.te-batch-check) {
+  color: var(--text-disabled);
+}
+
+/* Shared dialog */
+.te-dialog {
+  max-width: 420px;
+}
+
+.te-dialog .modal-header {
+  padding: 10px 16px;
+}
+
+.te-dialog-input {
+  margin-top: 10px;
+}
+
+.te-dialog-list {
+  max-height: 320px;
+}

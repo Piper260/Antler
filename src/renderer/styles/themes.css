@@ -1,0 +1,105 @@
+/* ==========================================================================
+   Antler - colour themes.
+
+   A theme is one block of base colours below. Everything else (hover and
+   muted shades, borders between surfaces, scrollbars, shadows) is derived
+   from these in style.css, so a theme never needs more than this list.
+
+   To add a theme:
+     1. Copy a block, give it a new data-theme id and change the colours.
+     2. Add { id, name } to js/app/themes.js so it shows in Settings.
+   That's all. Keep text-primary/bg-primary contrast at 7:1 or more and
+   accent/text-on-accent at 4.5:1 or more.
+
+   The first block is the default and also applies before a theme is chosen.
+   ========================================================================== */
+
+/* Moss and Bone: bark-brown surfaces, antler-bone text, moss accent. */
+:root,
+:root[data-theme="moss"] {
+  color-scheme: dark;
+
+  --bg-primary: #171614;
+  --bg-secondary: #1e1c19;
+  --bg-tertiary: #25231f;
+  --bg-elevated: #2d2a26;
+  --border-primary: #34302b;
+
+  --text-primary: #ebe6dd;
+  --text-secondary: #b3ab9e;
+  --text-tertiary: #857d71;
+
+  --accent-primary: #8fa86e;
+  --text-on-accent: #141310;
+
+  --success: #5fae9a;
+  --warning: #d9894a;
+  --error: #dc6561;
+}
+
+/* Velvet: the same bark surfaces with a warm tan accent. */
+:root[data-theme="velvet"] {
+  color-scheme: dark;
+
+  --bg-primary: #171614;
+  --bg-secondary: #1e1c19;
+  --bg-tertiary: #25231f;
+  --bg-elevated: #2d2a26;
+  --border-primary: #34302b;
+
+  --text-primary: #ebe6dd;
+  --text-secondary: #b3ab9e;
+  --text-tertiary: #857d71;
+
+  --accent-primary: #c9a77c;
+  --text-on-accent: #141310;
+
+  --success: #7fae74;
+  --warning: #e07a45;
+  --error: #dc6561;
+}
+
+/* Slate: the original cool grey and blue, kept exactly as it was
+   (including its white-on-blue buttons at 3.4:1). */
+:root[data-theme="slate"] {
+  color-scheme: dark;
+
+  --bg-primary: #17181a;
+  --bg-secondary: #1d1e21;
+  --bg-tertiary: #242529;
+  --bg-elevated: #2c2d32;
+  --border-primary: #2f3035;
+
+  --text-primary: #e6e6e8;
+  --text-secondary: #a9abb2;
+  --text-tertiary: #7d7f87;
+
+  --accent-primary: #4c8fd6;
+  --text-on-accent: #ffffff;
+
+  --success: #62ad7b;
+  --warning: #d39c4d;
+  --error: #dc6561;
+}
+
+/* Birch: a light theme, pale bark with a darker moss accent. */
+:root[data-theme="birch"] {
+  color-scheme: light;
+
+  --bg-primary: #f4f1ea;
+  --bg-secondary: #ebe7de;
+  --bg-tertiary: #e2ddd2;
+  --bg-elevated: #fbf9f5;
+  --border-primary: #d3cdc0;
+
+  --text-primary: #24211c;
+  --text-secondary: #57514a;
+  --text-tertiary: #6b645a;
+
+  --accent-primary: #4f6b34;
+  --text-on-accent: #ffffff;
+
+  --success: #2f7a64;
+  --warning: #a8591c;
+  --error: #b43c38;
+}

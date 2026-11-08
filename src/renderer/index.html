@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Antler - LoRA dataset workbench for e621">
+    
+    <!-- Security -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://static1.e621.net https://static1.e926.net; object-src 'none'; base-uri 'none'; form-action 'none'; media-src 'self' blob:;">
+    
+    <title>Antler</title>
+    
+    <!-- Styles -->
+    <!-- Design system first, then one stylesheet per tool. -->
+    <script src="js/app/themes.js"></script>
+    <link rel="stylesheet" href="styles/themes.css">
+    <link rel="stylesheet" href="styles/style.css">
+    <link rel="stylesheet" href="styles/components.css">
+    <link rel="stylesheet" href="styles/pages.css">
+    <link rel="stylesheet" href="styles/post-lookup.css">
+    <link rel="stylesheet" href="styles/artist-search.css">
+    <link rel="stylesheet" href="styles/tag-editor.css">
+    <link rel="stylesheet" href="styles/auto-prompter.css">
+    <link rel="stylesheet" href="styles/prompt-editor.css">
+    <link rel="stylesheet" href="styles/image-batch.css">
+    <link rel="stylesheet" href="styles/image-resizer.css">
+    <link rel="stylesheet" href="styles/image-upscaler.css">
+    <link rel="stylesheet" href="styles/video-frames.css">
+    <link rel="stylesheet" href="styles/image-cleanup.css">
+    <link rel="stylesheet" href="styles/image-organizer.css">
+    <link rel="stylesheet" href="styles/comic-panels.css">
+    <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
+</head>
+<body>
+    <div id="main-app" class="main-app">
+</html>
+        <!-- Title Bar -->
+        <div class="title-bar">
+            <div class="title-bar-left">
+                <button id="sidebar-toggle" class="title-bar-btn" title="Toggle Sidebar">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <img src="assets/icon.svg" alt="" width="20" height="20" class="app-logo">
+                <div class="app-title">Antler</div>
+            </div>
+            
+            <div class="title-bar-right">
+                <button id="dev-tools-btn" class="title-bar-btn" title="Developer Tools" style="display: none;">
+                    <i class="fas fa-code"></i>
+                </button>
+                <button id="minimize-btn" class="title-bar-btn" title="Minimize">
+                    <i class="fas fa-window-minimize"></i>
+                </button>
+                <button id="maximize-btn" class="title-bar-btn" title="Maximize">
+                    <i class="fas fa-window-maximize"></i>
+                </button>
+                <button id="close-btn" class="title-bar-btn close-btn" title="Close">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <!-- Sidebar -->
+            <div id="sidebar" class="sidebar">
+                <div class="sidebar-content">
+                    <!-- TOP SECTIONS (Tools, etc.) -->
+                    <div class="nav-top-sections">
+                    <nav class="nav-menu">
+                        <div class="nav-section">
+                        <h3 class="nav-section-title">Tools</h3>
+                        <ul class="nav-list" id="tools-nav">
+                            <!-- Tools will be dynamically loaded here -->
+                        </ul>
+                        </div>
+                        
+                        <div class="nav-section nav-processes-section">
+                        <h3 class="nav-section-title">Processes</h3>
+                        <ul class="nav-list process-list" id="processes-nav">
+                            <li class="process-empty">Nothing running</li>
+                        </ul>
+                        </div>
+                    </nav>
+                    </div>
+                    
+                    <!-- BOTTOM SECTION (System) -->
+                    <div class="nav-system-section">
+                    <div class="nav-section">
+                        <h3 class="nav-section-title">System</h3>
+                        <ul class="nav-list">
+                        <li class="nav-item" id="settings-nav">
+                            <i class="fas fa-cog nav-icon"></i>
+                            <span class="nav-text">Settings</span>
+                        </li>
+                        <li class="nav-item" id="about-nav">
+                            <i class="fas fa-info-circle nav-icon"></i>
+                            <span class="nav-text">About</span>
+                        </li>
+                        </ul>
+                    </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="main-content">
+                <!-- Content Header -->
+                <div class="content-header">
+                    <div class="breadcrumb">
+                        <span id="current-page-title">Welcome</span>
+                    </div>
+                    <div class="content-actions">
+                        <!-- Dynamic action buttons will go here -->
+                    </div>
+                </div>
+
+                <!-- Content Body -->
+                <div id="content-body" class="content-body">
+                    <!-- Initial loading state - will be replaced by dynamic content -->
+                    <div class="welcome-dashboard">
+                        <div class="welcome-hero">
+                            <div class="hero-content">
+                                <i class="fas fa-rocket welcome-icon"></i>
+                                <h1>Welcome to Antler</h1>
+                                <p class="hero-subtitle">Loading your dashboard...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Global Footer -->
+                <div class="global-footer">
+                    <div class="footer-section footer-status">
+                        <i class="fas fa-circle status-indicator" id="global-status-indicator"></i>
+                        <span id="global-status-text">Ready</span>
+                    </div>
+                    <div class="footer-section footer-info">
+                        <span class="footer-item" id="footer-cache-info">
+                            <i class="fas fa-database"></i>
+                            Cache: 0 items
+                        </span>
+                        <span class="footer-separator">|</span>
+                        <span class="footer-item" id="footer-api-status">
+                            <i class="fas fa-server"></i>
+                            API: Not Configured
+                        </span>
+                        <span class="footer-separator">|</span>
+                        <span class="footer-item" id="footer-downloads">
+                            <i class="fas fa-download"></i>
+                            Downloads: 0
+                        </span>
+                    </div>
+                    <div class="footer-section footer-actions">
+                        <span id="footer-version">v1.0.0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="error-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Error</h3>
+                <button class="modal-close" id="error-modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="error-message">An error occurred</p>
+                <details id="error-details" style="display: none;">
+                    <summary>Technical Details</summary>
+                    <pre id="error-stack"></pre>
+                </details>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="error-retry-btn" style="display: none;">
+                    Retry
+                </button>
+                <button class="btn btn-secondary" id="error-close-btn">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Toast -->
+    <div id="success-toast" class="toast toast-success" style="display: none;">
+        <div class="toast-content">
+            <i class="fas fa-check-circle"></i>
+            <span id="success-message">Success!</span>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/modules/PerformanceMonitor.js"></script>
+    <script src="js/utils/mixMethods.js"></script>
+    <script src="js/modules/BaseTool.js"></script>
+    <script src="js/utils/characterProfiles.js"></script>
+    <script src="js/utils/panelTagLearning.js"></script>
+    <script src="js/utils/panelTagReview.js"></script>
+    <script src="js/utils/frameSelect.js"></script>
+    <script src="js/utils/heatmapCells.js"></script>
+    <script src="js/utils/hydraBatch.js"></script>
+    <script type="module" src="js/modules/tools/PostLookupTool.js"></script>
+    <script type="module" src="js/modules/tools/ArtistSearchTool.js"></script>
+    <script type="module" src="js/modules/tools/TagEditorTool.js"></script>
+    <script type="module" src="js/modules/tools/AutoPrompterTool.js"></script>
+    <script type="module" src="js/modules/tools/PromptEditorTool.js"></script>
+    <script type="module" src="js/modules/tools/ImageResizerTool.js"></script>
+    <script type="module" src="js/modules/tools/ImageUpscalerTool.js"></script>
+    <script type="module" src="js/modules/tools/ImageOrganizerTool.js"></script>
+    <script type="module" src="js/modules/tools/ComicPanelTool.js"></script>
+    <script type="module" src="js/modules/tools/VideoFrameTool.js"></script>
+    <script type="module" src="js/modules/tools/ImageCleanupTool.js"></script>
+    <script src="js/app/pageTemplates.js"></script>
+    <script src="js/app/infoPages.js"></script>
+    <script src="js/app/settingsPage.js"></script>
+    <script src="js/app/modelsPanel.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

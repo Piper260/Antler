@@ -1,0 +1,179 @@
+{
+  "_comment": "Files with a 'source' download from the original author's Hugging Face repo, pinned to a commit. Files without one come from 'repo' (ONNX conversions Antler hosts because the original only publishes PyTorch weights). Sizes and sha256 are checked after download; refresh them with npm run models:manifest.",
+  "repo": "Piper260/antler-models",
+  "revision": "main",
+  "packs": [
+    {
+      "id": "hydra",
+      "name": "Hydra 3.5 tagger",
+      "description": "e621 tagger used by the Tag Editor and Comic Panels, with heatmaps that show where each tag was found.",
+      "recommended": true,
+      "credits": [
+        {
+          "name": "Hydra 3.5 by RedRocket",
+          "home": "RedRocket/Hydra",
+          "license": "Apache-2.0",
+          "note": "ONNX conversion hosted by Antler"
+        }
+      ],
+      "files": [
+        {
+          "path": "tagger/hydra-tagger.onnx",
+          "size": 1914073,
+          "sha256": "d5cc9f6769bd1015db55e633a2abbb64b4995950e7a70c0f0c416988efaf272c"
+        },
+        {
+          "path": "tagger/hydra-tagger.onnx.data",
+          "size": 1050145248,
+          "sha256": "a841cfa148da83b35af31ff93307f71aef0f4332ec9b07bc7f8c2e064d3a1fc9"
+        },
+        {
+          "path": "tagger/hydra-tags.csv",
+          "size": 192860,
+          "sha256": "687b8fb3d8f815ad6393467b780d2e2441716b8a2a3beebc1cc225ce01c209a1"
+        },
+        {
+          "path": "tagger/hydra-cam.onnx",
+          "size": 225088213,
+          "sha256": "4275301df134d91b60ff525833ccbc0c7ec9c08960c94cdf97c2e990a62992e0"
+        }
+      ]
+    },
+    {
+      "id": "comic",
+      "name": "Comic panels and speech bubbles",
+      "description": "Panel detection for Comic Panels and bubble detection for Image Cleanup.",
+      "recommended": true,
+      "credits": [
+        {
+          "name": "Inkwell panel detector by cedarrapidsboy",
+          "home": "cedarrapidsboy/inkwell-panel-models",
+          "license": "license on the model card"
+        },
+        {
+          "name": "Comic text and bubble detector by ogkalu",
+          "home": "ogkalu/comic-text-and-bubble-detector",
+          "license": "Apache-2.0"
+        }
+      ],
+      "files": [
+        {
+          "path": "comic/inkwell-panels.onnx",
+          "source": {
+            "repo": "cedarrapidsboy/inkwell-panel-models",
+            "revision": "fa7afba52ba7dc7b0840c7702b767972b5e17a9b",
+            "path": "best.onnx"
+          },
+          "size": 12256396,
+          "sha256": "f240e1296efd048126b26ea4ffeddc97d7c3aa667a37e3127c2afc6d5e9b9578"
+        },
+        {
+          "path": "comic/comic-bubbles.onnx",
+          "source": {
+            "repo": "ogkalu/comic-text-and-bubble-detector",
+            "revision": "16e8a622f91fabc6b5b65c96d32d1183f8843546",
+            "path": "detector.onnx"
+          },
+          "size": 168481531,
+          "sha256": "065744e91c0594ad8663aa8b870ce3fb27222942eded5a3cc388ce23421bd195"
+        }
+      ]
+    },
+    {
+      "id": "ultrasharp",
+      "name": "UltraSharp V2 upscalers",
+      "description": "Full and lite versions for the Image Upscaler. Free for non-commercial use only. The bundled ncnn upscalers work without these.",
+      "recommended": true,
+      "credits": [
+        {
+          "name": "UltraSharp V2 by Kim2091",
+          "home": "Kim2091/UltraSharpV2",
+          "license": "CC BY-NC-SA 4.0"
+        }
+      ],
+      "files": [
+        {
+          "path": "ultrasharp-v2-4x.onnx",
+          "source": {
+            "repo": "Kim2091/UltraSharpV2",
+            "revision": "2d1db39ff692c111da92112d49f833e4ad7035ae",
+            "path": "4x-UltraSharpV2_fp32_op17.onnx"
+          },
+          "size": 51800517,
+          "sha256": "6c0201e3403745f39a9aa5273c50ed084cf6c4af5a71a4654c30252cf19bf0a5"
+        },
+        {
+          "path": "ultrasharp-v2-lite-4x.onnx",
+          "source": {
+            "repo": "Kim2091/UltraSharpV2",
+            "revision": "2d1db39ff692c111da92112d49f833e4ad7035ae",
+            "path": "4x-UltraSharpV2_Lite_fp32_op17.onnx"
+          },
+          "size": 29911078,
+          "sha256": "ba692ad6c7b59bdebbaa9951c9ef5295a6d69e7444f1c46824c3cafdaab067a8"
+        }
+      ]
+    },
+    {
+      "id": "jtp",
+      "name": "JTP PILOT2 tagger",
+      "description": "Older e621 tagger, used only when Hydra is missing.",
+      "recommended": false,
+      "credits": [
+        {
+          "name": "JTP PILOT2 by RedRocket",
+          "home": "RedRocket/JointTaggerProject",
+          "license": "Apache-2.0",
+          "note": "ONNX conversion hosted by Antler"
+        }
+      ],
+      "files": [
+        {
+          "path": "tagger/jtp-pilot2.onnx",
+          "size": 1796913431,
+          "sha256": "e1f62e85e7bf2e0ce482592c898dcedae201c873e8b276f219383bc9c4c38655"
+        },
+        {
+          "path": "tagger/jtp-pilot2-tags.csv",
+          "size": 194864,
+          "sha256": "6d8b7c38d9b5a5e222d72fb94cab4365beb6b0b948052fec218bab60a91ae61c"
+        }
+      ]
+    },
+    {
+      "id": "z3d",
+      "name": "Z3D e621 tagger",
+      "description": "Last-resort fallback tagger, used only when Hydra and JTP are missing.",
+      "recommended": false,
+      "credits": [
+        {
+          "name": "Z3D-E621-Convnext by Z3D",
+          "home": "toynya/Z3D-E621-Convnext",
+          "license": "license on the model card"
+        }
+      ],
+      "files": [
+        {
+          "path": "tagger/z3d-e621.onnx",
+          "source": {
+            "repo": "toynya/Z3D-E621-Convnext",
+            "revision": "39b081cafc120253513e6e9c21283892c6994e62",
+            "path": "model.onnx"
+          },
+          "size": 389761129,
+          "sha256": "672f6c1b987abfdb311c41ecd57efdc0e5b1860944a3722984326316f4655c70"
+        },
+        {
+          "path": "tagger/z3d-e621-tags.csv",
+          "source": {
+            "repo": "toynya/Z3D-E621-Convnext",
+            "revision": "39b081cafc120253513e6e9c21283892c6994e62",
+            "path": "tags-selected.csv"
+          },
+          "size": 243229,
+          "sha256": "609c75136b90fc0a87cce111961f172d029ab400299cfa8bbf6830918305aa40"
+        }
+      ]
+    }
+  ]
+}

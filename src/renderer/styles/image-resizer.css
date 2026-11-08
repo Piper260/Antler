@@ -1,0 +1,6 @@
+/* Image Resizer - tool-specific parts. Layout shared with the Image
+   Upscaler lives in image-batch.css. */
+
+.ir-needs-count {
+  color: var(--warning);
+}

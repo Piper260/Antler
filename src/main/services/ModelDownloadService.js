@@ -66,6 +66,54 @@ async function hashExisting(file, hash) {
   });
 }
 
+async function sha256Of(file) {
+  const hash = crypto.createHash('sha256');
+  await hashExisting(file, hash);
+  return hash.digest('hex');
+}
+
+// Folders never worth searching for models.
+const SKIP_DIRS = new Set(['node_modules', '.git', '$RECYCLE.BIN', 'System Volume Information']);
+const MAX_DEPTH = 5;
+const MAX_ENTRIES = 50000;
+
+/**
+ * Files under `folder` (a few levels deep) whose size is one of `sizes`,
+ * grouped by size. Size is a cheap first filter; files are hashed later.
+ */
+async function indexBySize(folder, sizes, signal) {
+  const bySize = new Map();
+  let seen = 0;
+  const walk = async (dir, depth) => {
+    if (depth > MAX_DEPTH || seen > MAX_ENTRIES || signal?.aborted) return;
+    let entries;
+    try {
+      entries = await fs.promises.readdir(dir, { withFileTypes: true });
+    } catch {
+      return; // unreadable folder: skip it
+    }
+    for (const entry of entries) {
+      if (++seen > MAX_ENTRIES) return;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (!SKIP_DIRS.has(entry.name)) await walk(full, depth + 1);
+      } else if (entry.isFile()) {
+        try {
+          const { size } = await fs.promises.stat(full);
+          if (sizes.has(size)) {
+            if (!bySize.has(size)) bySize.set(size, []);
+            bySize.get(size).push(full);
+          }
+        } catch {
+          // vanished or unreadable: skip it
+        }
+      }
+    }
+  };
+  await walk(folder, 0);
+  return bySize;
+}
+
 class ModelDownloadService {
   /**
    * @param {{targetDir: string, manifest?: object, fetchImpl?: Function, find?: Function}} options
@@ -132,6 +180,65 @@ class ModelDownloadService {
       }
       onProgress({ state: 'error', message: error.message, done: state.done, total });
       throw error;
+    } finally {
+      this.controller = null;
+    }
+  }
+
+  /**
+   * Copies model files the user already has in `folder` into the models
+   * folder. Files are matched by size and SHA-256, not by name, so renamed
+   * copies (such as an author's original file names) are found too. Nothing
+   * in `folder` is changed.
+   * @returns {{imported: number, missing: string[], cancelled?: boolean}}
+   */
+  async importFrom(folder, onProgress = () => {}) {
+    if (this.busy) throw new Error('A model download is already running');
+    if (!folder || !fs.existsSync(folder)) throw new Error('That folder does not exist');
+
+    const needed = this.manifest.packs
+      .flatMap((pack) => pack.files.map((entry) => ({ pack, entry })))
+      .filter(({ entry }) => entry.size && entry.sha256 && !isFilePresent(entry, this.find));
+    if (needed.length === 0) return { imported: 0, missing: [] };
+
+    this.controller = new AbortController();
+    const { signal } = this.controller;
+    const hashes = new Map(); // path -> sha256, so no file is hashed twice
+    let imported = 0;
+    try {
+      onProgress({ state: 'importing', message: 'Looking for model files', done: 0, total: needed.length });
+      const bySize = await indexBySize(folder, new Set(needed.map(({ entry }) => entry.size)), signal);
+
+      for (let i = 0; i < needed.length && !signal.aborted; i++) {
+        const { pack, entry } = needed[i];
+        const name = path.posix.basename(entry.path);
+        // Same name first: the usual case, and it saves hashing the others.
+        const candidates = (bySize.get(entry.size) || [])
+          .sort((a, b) => (path.basename(b) === name) - (path.basename(a) === name));
+
+        for (const candidate of candidates) {
+          if (signal.aborted) break;
+          onProgress({ state: 'importing', message: `Checking ${path.basename(candidate)} for ${pack.name}`, done: i, total: needed.length });
+          if (!hashes.has(candidate)) hashes.set(candidate, await sha256Of(candidate));
+          if (hashes.get(candidate) !== entry.sha256) continue;
+
+          const target = this._targetPath(entry);
+          await fs.promises.mkdir(path.dirname(target), { recursive: true });
+          await fs.promises.copyFile(candidate, `${target}.part`);
+          await fs.promises.rm(target, { force: true });
+          await fs.promises.rename(`${target}.part`, target);
+          imported++;
+          break;
+        }
+      }
+
+      const missing = needed.filter(({ entry }) => !isFilePresent(entry, this.find)).map(({ entry }) => entry.path);
+      if (signal.aborted) {
+        onProgress({ state: 'cancelled', done: imported, total: needed.length });
+        return { imported, missing, cancelled: true };
+      }
+      onProgress({ state: 'done', done: needed.length, total: needed.length });
+      return { imported, missing };
     } finally {
       this.controller = null;
     }

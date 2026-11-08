@@ -273,6 +273,7 @@ const electronAPI = {
     download: (packIds) => safeInvoke('models:download', packIds),
     cancel: () => safeInvoke('models:cancel'),
     openFolder: () => safeInvoke('models:open-folder'),
+    importFromFolder: () => safeInvoke('models:import'),
     onProgress: (callback) => safeOn('models:progress', callback)
   },
 

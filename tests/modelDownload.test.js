@@ -111,6 +111,69 @@ describe('ModelDownloadService', () => {
   });
 });
 
+describe('importFrom', () => {
+  let target;
+  let source;
+  // "Installed" means present in the models folder Antler writes to.
+  const findIn = (dir) => (file) => {
+    const full = path.join(dir, file);
+    return fs.existsSync(full) ? full : null;
+  };
+
+  beforeEach(() => {
+    target = fs.mkdtempSync(path.join(os.tmpdir(), 'antler-import-target-'));
+    source = fs.mkdtempSync(path.join(os.tmpdir(), 'antler-import-source-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(target, { recursive: true, force: true });
+    fs.rmSync(source, { recursive: true, force: true });
+  });
+
+  test('finds files by checksum, even renamed or nested, and skips look-alikes', async () => {
+    const tagger = Buffer.from('hydra tagger weights');
+    const panels = Buffer.from('panel detector weights');
+    const lookAlike = Buffer.from('xanel detector weights'); // same size, different bytes
+    const manifest = makeManifest([
+      { path: 'tagger/hydra.onnx', size: tagger.length, sha256: sha(tagger) },
+      { path: 'comic/panels.onnx', size: panels.length, sha256: sha(panels) }
+    ]);
+    fs.mkdirSync(path.join(source, 'deep', 'er'), { recursive: true });
+    fs.writeFileSync(path.join(source, 'hydra.onnx'), tagger);
+    fs.writeFileSync(path.join(source, 'panels.onnx'), lookAlike);
+    fs.writeFileSync(path.join(source, 'deep', 'er', 'best.onnx'), panels); // the author's own name
+
+    const service = new ModelDownloadService({ targetDir: target, manifest, fetchImpl: fakeFetch(Buffer.alloc(0)), find: findIn(target) });
+    const result = await service.importFrom(source);
+
+    expect(result).toEqual({ imported: 2, missing: [] });
+    expect(fs.readFileSync(path.join(target, 'tagger', 'hydra.onnx'))).toEqual(tagger);
+    expect(fs.readFileSync(path.join(target, 'comic', 'panels.onnx'))).toEqual(panels);
+    // The source folder is left as it was.
+    expect(fs.readFileSync(path.join(source, 'panels.onnx'))).toEqual(lookAlike);
+  });
+
+  test('reports what it could not find and leaves installed files alone', async () => {
+    const have = Buffer.from('already installed');
+    const want = Buffer.from('wanted but absent');
+    const manifest = makeManifest([
+      { path: 'a.onnx', size: have.length, sha256: sha(have) },
+      { path: 'b.onnx', size: want.length, sha256: sha(want) }
+    ]);
+    fs.writeFileSync(path.join(target, 'a.onnx'), have);
+    const service = new ModelDownloadService({ targetDir: target, manifest, fetchImpl: fakeFetch(Buffer.alloc(0)), find: findIn(target) });
+
+    expect(await service.importFrom(source)).toEqual({ imported: 0, missing: ['b.onnx'] });
+  });
+
+  test('refuses a folder that does not exist', async () => {
+    const service = new ModelDownloadService({ targetDir: target, manifest: makeManifest([]), fetchImpl: fakeFetch(Buffer.alloc(0)), find: none });
+    await expect(service.importFrom(path.join(source, 'nope'))).rejects.toThrow(/does not exist/);
+  });
+});
+
+const none = () => null;
+
 describe('packStatus', () => {
   test('a pack is installed only when every file is present at its size', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'antler-status-'));

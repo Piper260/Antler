@@ -175,6 +175,7 @@ class AppPageTemplates {
           <div data-models-list></div>
           <div class="form-actions">
             <button class="btn btn-primary" data-models-download>Download</button>
+            <button class="btn btn-secondary" data-models-import title="Copy models you already have from a folder"><i class="fas fa-file-import"></i> I already have these</button>
             <button class="btn btn-secondary" data-models-open-folder><i class="fas fa-folder-open"></i> Open models folder</button>
           </div>
         </div>

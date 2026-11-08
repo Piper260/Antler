@@ -57,6 +57,7 @@ class AppModels {
         </div>
         <div class="modal-footer model-footer">
           ${firstRun ? '<label class="form-checkbox model-footer-left"><input type="checkbox" data-models-dont-ask> Don\'t ask again</label>' : ''}
+          <button class="btn btn-secondary" data-models-import title="Copy models you already have from a folder">I already have these</button>
           <button class="btn btn-secondary" data-models-close>${firstRun ? 'Not now' : 'Close'}</button>
           <button class="btn btn-primary" data-models-download>Download</button>
         </div>
@@ -152,7 +153,36 @@ class AppModels {
         else this.startModelDownload(selected());
       };
     }
+    const importButton = root.querySelector('[data-models-import]');
+    if (importButton) {
+      importButton.hidden = status.packs.every(pack => pack.installed);
+      importButton.onclick = () => this.importModels();
+    }
     this.syncModelButtons();
+  }
+
+  /** "I already have these": copies matching files from a folder the user picks. */
+  async importModels() {
+    if (this.modelDownloadRunning) return;
+    this.modelDownloadRunning = true;
+    this.syncModelButtons();
+
+    const result = await window.electronAPI.models.importFromFolder();
+    this.modelDownloadRunning = false;
+    this.syncModelButtons();
+
+    if (!result?.success) {
+      this.showToast(result?.message || 'Could not import models', 'error', 8000);
+    } else if (result.picked) {
+      const left = result.missing?.length || 0;
+      if (result.cancelled) this.showToast('Import stopped', 'info');
+      else if (result.imported === 0) this.showToast('No matching model files in that folder', 'warning', 6000);
+      else this.showToast(`Copied ${result.imported} model file${result.imported === 1 ? '' : 's'}${left ? `; ${left} still to download` : ''}`, 'success', 6000);
+    }
+
+    for (const root of [document.getElementById('models-dialog'), document.getElementById('models-settings')]) {
+      if (root) await this.renderModelList(root);
+    }
   }
 
   async startModelDownload(packIds) {
@@ -189,6 +219,9 @@ class AppModels {
     document.querySelectorAll('[data-models-list] input[type="checkbox"]').forEach(input => {
       if (!input.closest('.is-installed')) input.disabled = this.modelDownloadRunning;
     });
+    document.querySelectorAll('[data-models-import]').forEach(button => {
+      button.disabled = this.modelDownloadRunning;
+    });
   }
 
   showModelProgress(progress) {
@@ -198,7 +231,8 @@ class AppModels {
     else if (progress.state === 'downloading') {
       const speed = progress.bytesPerSecond ? ` at ${formatModelBytes(progress.bytesPerSecond)}/s` : '';
       text = `${progress.pack}: ${progress.file.split('/').pop()}. ${formatModelBytes(progress.done)} of ${formatModelBytes(progress.total)}${speed}`;
-    } else if (progress.state === 'error') text = progress.message || 'Download failed';
+    } else if (progress.state === 'importing') text = progress.message || 'Looking for model files';
+    else if (progress.state === 'error') text = progress.message || 'Download failed';
     else if (progress.state === 'cancelled') text = 'Stopped';
     else if (progress.state === 'done') text = 'Done';
 

@@ -8,29 +8,48 @@
  * resources/models only when it is new or has changed. Moving within the
  * same drive is instant.
  *
- * The installer ships only the small ncnn upscalers tracked in git (the
- * .param/.bin pairs in resources/models itself). Everything else, the ONNX
- * taggers, detectors and upscalers, is left out: Antler offers to download
- * them on first launch, so a public installer doesn't redistribute anyone's
- * model and stays small. The portable folder keeps every model, for
- * personal use.
+ * The Windows installer ships only the small ncnn upscalers tracked in git
+ * (the .param/.bin pairs in resources/models itself). Everything else, the
+ * ONNX taggers, detectors and upscalers, is left out: Antler offers to
+ * download them on first launch, so a public installer doesn't redistribute
+ * anyone's model and stays small. The macOS and Linux builds leave the ncnn
+ * models out too, since only Windows has the upscayl-bin that runs them.
+ * The portable folder keeps every model, for personal use.
  */
 const fs = require('fs');
 const path = require('path');
 
 const SOURCE = path.join(__dirname, '..', 'resources', 'models');
 
+/** An ncnn upscaler file. Only Windows has the upscayl-bin that runs them. */
+function isNcnnModel(file) {
+  return path.dirname(file) === '.' && /\.(param|bin)$/i.test(file);
+}
+
 /** Whether a file (relative to resources/models) goes into the installer. */
 function shipsWithInstaller(file) {
-  return path.dirname(file) === '.' && /\.(param|bin)$/i.test(file);
+  return isNcnnModel(file);
 }
 
 // Paths relative to resources/models, as listFiles() returns them.
 const INSTALLER_EXCLUDES = new Set(listFiles(SOURCE).filter(file => !shipsWithInstaller(file)));
 
 const cacheDir = (context) => path.join(context.outDir, '.model-cache');
-const modelsDir = (context) => path.join(context.appOutDir, 'resources', 'models');
+const isWindows = (context) => context.electronPlatformName === 'win32';
+// A macOS app keeps its resources inside the .app bundle.
+const resourcesDir = (context) => (context.electronPlatformName === 'darwin'
+  ? path.join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`, 'Contents', 'Resources')
+  : path.join(context.appOutDir, 'resources'));
+const modelsDir = (context) => path.join(resourcesDir(context), 'models');
 const isInstaller = (context) => context.targets.some(target => target.name !== 'dir');
+
+/** The model files this build should carry. */
+function wantedModels(context) {
+  return listFiles(SOURCE).filter((file) => {
+    if (isNcnnModel(file) && !isWindows(context)) return false;
+    return !(isInstaller(context) && INSTALLER_EXCLUDES.has(file));
+  });
+}
 
 /** Files under a folder, as paths relative to it. */
 function listFiles(folder) {
@@ -60,7 +79,7 @@ exports.beforePack = async (context) => {
 
 /** Puts each model this build needs into the output, reusing the cached copy when it is unchanged. */
 exports.afterPack = async (context) => {
-  const wanted = listFiles(SOURCE).filter(file => !(isInstaller(context) && INSTALLER_EXCLUDES.has(file)));
+  const wanted = wantedModels(context);
   let reused = 0;
   let copied = 0;
   for (const file of wanted) {

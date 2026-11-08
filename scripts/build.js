@@ -22,6 +22,16 @@ const PACKAGE = require('../package.json');
 const PRODUCT_NAME = PACKAGE.build.productName;
 const PRODUCT_EXE = `${PRODUCT_NAME}.exe`;
 const LOG_FILE = path.join(ROOT, 'logs', 'build.log');
+
+// What a build on this machine produces. electron-builder builds for the
+// platform it runs on; the release workflow builds each on its own runner.
+const PLATFORMS = {
+  win32: { name: 'Windows', unpacked: 'win-unpacked', installer: '.exe', installerName: 'setup .exe' },
+  darwin: { name: 'macOS', unpacked: 'mac-arm64', installer: '.dmg', installerName: '.dmg' },
+  linux: { name: 'Linux', unpacked: 'linux-unpacked', installer: '.AppImage', installerName: 'AppImage' }
+};
+const PLATFORM = PLATFORMS[process.platform] || PLATFORMS.linux;
+const UNPACKED = path.join(ROOT, 'dist', PLATFORM.unpacked);
 const GB = 1024 ** 3;
 const args = process.argv.slice(2);
 
@@ -55,7 +65,9 @@ function checkSetup(buildType) {
   const [major] = process.versions.node.split('.').map(Number);
   if (major < 20) throw new Error(`Node ${process.versions.node} is too old; Antler needs Node 20 or newer`);
   if (!fs.existsSync(path.join(ROOT, 'node_modules', 'electron-builder'))) throw new Error('Dependencies are missing; run npm install first');
-  for (const file of ['build/icon.png', 'resources/win/bin/upscayl-bin.exe', 'src/shared/models.json']) {
+  const required = ['build/icon.png', 'src/shared/models.json'];
+  if (process.platform === 'win32') required.push('resources/win/bin/upscayl-bin.exe');
+  for (const file of required) {
     if (!fs.existsSync(path.join(ROOT, file))) throw new Error(`${file} is missing`);
   }
 
@@ -66,23 +78,23 @@ function checkSetup(buildType) {
     const missing = manifest.packs.flatMap((p) => p.files).filter((f) => !fs.existsSync(path.join(ROOT, 'resources', 'models', ...f.path.split('/'))));
     if (missing.length) warnings.push(`${missing.length} model file${missing.length > 1 ? 's' : ''} not in resources/models; the portable folder won't have them`);
   }
-  return { note: `Node ${process.versions.node}, Electron ${PACKAGE.devDependencies.electron}`, warnings };
+  return { note: `${PLATFORM.name}, Node ${process.versions.node}, Electron ${PACKAGE.devDependencies.electron}`, warnings };
 }
 
 /**
  * Stops early when the drive can't hold the build. Models kept from the last
- * build (in dist/win-unpacked or dist/.model-cache, see modelHooks.js) are
+ * build (in the unpacked folder or dist/.model-cache, see modelHooks.js) are
  * reused, so only missing ones need room. The installer leaves models out,
- * so it needs little. The rest of the old dist/win-unpacked is replaced, so
+ * so it needs little. The rest of the old unpacked folder is replaced, so
  * its space counts as free.
  */
 function checkDiskSpace(buildType) {
   const dist = path.join(ROOT, 'dist');
   const models = folderSize(path.join(ROOT, 'resources', 'models'));
-  const kept = folderSize(path.join(dist, 'win-unpacked', 'resources', 'models')) + folderSize(path.join(dist, '.model-cache'));
+  const kept = folderSize(path.join(UNPACKED, 'resources', 'models')) + folderSize(path.join(dist, '.model-cache'));
   const needed = (buildType === 'dir' ? Math.max(0, models - kept) : 0) + 1 * GB;
   const { bavail, bsize } = fs.statfsSync(ROOT);
-  const free = bavail * bsize + folderSize(path.join(dist, 'win-unpacked')) - folderSize(path.join(dist, 'win-unpacked', 'resources', 'models'));
+  const free = bavail * bsize + folderSize(UNPACKED) - folderSize(path.join(UNPACKED, 'resources', 'models'));
   if (free < needed) {
     throw new Error(`Not enough disk space: about ${(needed / GB).toFixed(1)} GB needed, ${(free / GB).toFixed(1)} GB free`);
   }
@@ -114,7 +126,7 @@ async function findRunningInstances() {
 }
 
 /**
- * Closes running copies so electron-builder can overwrite dist/win-unpacked
+ * Closes running copies so electron-builder can overwrite the unpacked folder
  * without hitting a locked .exe or .dll. Asks politely first, then forces.
  */
 async function closeRunningInstances(update) {
@@ -138,16 +150,16 @@ async function closeRunningInstances(update) {
 }
 
 /**
- * Waits until nothing holds dist/win-unpacked, which electron-builder has to
+ * Waits until nothing holds the unpacked app folder (dist/win-unpacked on
+ * Windows), which electron-builder has to
  * delete. A closed Antler takes a moment to let go of its files, and a File
  * Explorer window or terminal open inside the folder holds it too. Renaming
  * the folder fails while anything has it open, so that is the test. Also
  * clears the half-built folder a failed build leaves behind.
  */
 async function waitForOutputFolder(update, timeoutMs = 20000) {
-  const dist = path.join(ROOT, 'dist');
-  fs.rmSync(path.join(dist, 'win-unpacked.tmp'), { recursive: true, force: true });
-  const folder = path.join(dist, 'win-unpacked');
+  fs.rmSync(`${UNPACKED}.tmp`, { recursive: true, force: true });
+  const folder = UNPACKED;
   if (!fs.existsSync(folder)) return false;
 
   const probe = `${folder}.unlock-check`;
@@ -160,9 +172,9 @@ async function waitForOutputFolder(update, timeoutMs = 20000) {
     } catch (error) {
       if (fs.existsSync(probe) && !fs.existsSync(folder)) fs.renameSync(probe, folder);
       if (Date.now() > deadline) {
-        throw new Error('dist/win-unpacked is still in use; close any File Explorer window or terminal open inside it and run the build again');
+        throw new Error(`${rel(folder)} is still in use; close any file manager window or terminal open inside it and run the build again`);
       }
-      update('waiting for dist/win-unpacked to be released');
+      update(`waiting for ${rel(folder)} to be released`);
       await sleep(500);
     }
   }
@@ -278,9 +290,9 @@ async function runElectronBuilder(buildType, update) {
 /** The installer this build wrote, or the folder for a portable build. */
 function builtOutput(buildType, startedAt) {
   const dist = path.join(ROOT, 'dist');
-  if (buildType === 'dir') return path.join(dist, 'win-unpacked');
+  if (buildType === 'dir') return UNPACKED;
   return fs.readdirSync(dist)
-    .filter((name) => name.endsWith('.exe'))
+    .filter((name) => name.endsWith(PLATFORM.installer))
     .map((name) => path.join(dist, name))
     .find((file) => fs.statSync(file).mtimeMs >= startedAt) || null;
 }
@@ -297,7 +309,8 @@ async function verifyOutput(buildType, startedAt, update) {
   const output = builtOutput(buildType, startedAt);
   if (!output) throw new Error('electron-builder finished but no new installer is in dist');
   if (buildType === 'dir') {
-    if (!fs.existsSync(path.join(output, PRODUCT_EXE))) throw new Error(`${PRODUCT_EXE} is missing from ${rel(output)}`);
+    const app = { win32: PRODUCT_EXE, darwin: `${PRODUCT_NAME}.app` }[process.platform] || PACKAGE.build.linux?.executableName || PRODUCT_NAME;
+    if (!fs.existsSync(path.join(output, app))) throw new Error(`${app} is missing from ${rel(output)}`);
     return { output, size: folderSize(output) };
   }
   update('hashing the installer');
@@ -310,7 +323,7 @@ async function verifyOutput(buildType, startedAt, update) {
 
 async function build(buildType) {
   const kind = buildType === 'dir' ? 'portable folder' : 'installer';
-  process.stdout.write(`  ${c.bone('Building the')} ${c.bold(c.moss(kind))}${c.bark(buildType === 'dir'
+  process.stdout.write(`  ${c.bone('Building the')} ${c.bold(c.moss(`${PLATFORM.name} ${kind}`))}${c.bark(buildType === 'dir'
     ? ' with every model, for your own use'
     : ', models download on first launch')}\n\n`);
 
@@ -331,7 +344,8 @@ async function build(buildType) {
     return { note: wasRunning ? `closed the running ${PRODUCT_NAME}` : 'ready' };
   });
 
-  await step('Preparing Windows tools', async (update) => {
+  await step('Preparing build tools', async (update) => {
+    if (process.platform !== 'win32') return { status: 'skipped', note: `not needed on ${PLATFORM.name}` };
     try {
       return (await ensureWinCodeSign(update)) ? { note: 'ready' } : { status: 'skipped', note: 'already in place' };
     } catch (error) {
@@ -364,15 +378,15 @@ async function main() {
   let plan;
   if (args.includes('--menu')) {
     const choice = await menu('What would you like to build?', [
-      { value: 'installer', label: 'Installer', hint: 'setup .exe for releases; models download on first launch' },
-      { value: 'dir', label: 'Portable folder', hint: 'dist/win-unpacked with every model, for your own use' },
+      { value: 'installer', label: 'Installer', hint: `${PLATFORM.installerName} for releases; models download on first launch` },
+      { value: 'dir', label: 'Portable folder', hint: `dist/${PLATFORM.unpacked} with every model, for your own use` },
       { value: 'both', label: 'Both', hint: 'the installer first, then the portable folder' }
     ]);
     if (!choice) {
       process.stdout.write(`  ${c.bark('Nothing built.')}\n\n`);
       return;
     }
-    // The installer build rewrites dist/win-unpacked without models, so it goes first.
+    // The installer build rewrites the unpacked folder without models, so it goes first.
     plan = choice === 'both' ? ['installer', 'dir'] : [choice];
   } else {
     plan = [args.includes('--dir') ? 'dir' : 'installer'];
@@ -383,7 +397,8 @@ async function main() {
 
   if (args.includes('--open') && last) {
     const folder = fs.statSync(last.output).isDirectory() ? last.output : path.dirname(last.output);
-    spawn(process.platform === 'win32' ? 'explorer' : 'xdg-open', [folder], { detached: true, stdio: 'ignore' }).unref();
+    const opener = { win32: 'explorer', darwin: 'open' }[process.platform] || 'xdg-open';
+    spawn(opener, [folder], { detached: true, stdio: 'ignore' }).unref();
   }
 }
 

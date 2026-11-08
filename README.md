@@ -51,13 +51,30 @@ Everything runs on your own machine. Antler talks to e621, and to your own Comfy
 
 ## Requirements
 
-- **Windows 10 or 11** (x64). The ncnn upscaler ships as a Windows binary.
-- **Node.js**, current LTS, to run from source.
+- **Windows 10 or 11** (x64), **macOS** on Apple Silicon, or **Linux** (x64).
 - **An e621 account** with an API key.
 - Optional: a **ComfyUI** server with Flux Fill for Image Cleanup.
 - Optional: **Ollama** or a **Hugging Face** token for the prompt tools.
 
+The bundled ncnn upscalers and GPU-accelerated tagging (DirectML) are Windows-only. On macOS and Linux the Image Upscaler uses the UltraSharp V2 models and tagging runs on the CPU.
+
 ## Installation
+
+Download the installer for your system from the [latest release](https://github.com/Piper260/Antler/releases/latest):
+
+| System | File | Notes |
+| --- | --- | --- |
+| Windows | `Antler-Setup-<version>.exe` | Windows SmartScreen may warn because the installer isn't code-signed; choose **More info > Run anyway**. |
+| macOS (Apple Silicon) | `Antler-<version>-mac-arm64.dmg` | The app isn't notarized. After dragging it to Applications, right-click it and choose **Open** the first time. |
+| Linux | `Antler-<version>-linux-x86_64.AppImage` | Make it executable (`chmod +x`), then run it. |
+
+Each file has a `.sha256` beside it to check the download.
+
+On first launch Antler offers to download its models (about 1.5 GB for the recommended set). See [Models](#models).
+
+### Running from source
+
+You need Node.js 20 or newer.
 
 ```bash
 git clone https://github.com/Piper260/Antler.git
@@ -65,8 +82,6 @@ cd Antler
 npm install
 npm start
 ```
-
-On first launch Antler offers to download its models (about 1.6 GB for the recommended set). See [Models](#models).
 
 ## Configuration
 
@@ -118,7 +133,23 @@ You can also place model files by hand in `resources/models/` (in a source check
 
 ## Building a release
 
-Double-click `build.bat`, or run:
+### Publishing a release
+
+Bump `version` in `package.json`, commit, then push a tag:
+
+```bash
+git tag v1.0.1
+```
+
+```bash
+git push origin v1.0.1
+```
+
+The [Release workflow](.github/workflows/release.yml) builds the Windows installer, the macOS `.dmg` and the Linux AppImage, each on its own runner, and publishes them with their `.sha256` files as a GitHub Release. Each build carries only its own platform's binaries. To check the builds without publishing, run the workflow by hand from the Actions tab.
+
+### Building locally
+
+electron-builder builds for the system it runs on. On Windows, double-click `build.bat`, or on any system run:
 
 ```bash
 npm run make
@@ -128,7 +159,7 @@ The builder asks what to build, checks your setup, packages the app, and verifie
 
 | Build | Models included | Use it for |
 | --- | --- | --- |
-| Installer | Only the small ncnn upscalers | Public releases. Antler downloads the other models on first launch, so the installer stays small and doesn't redistribute anyone's model. |
+| Installer | Only the small ncnn upscalers (Windows); none on macOS and Linux | Public releases. Antler downloads the other models on first launch, so the installer stays small and doesn't redistribute anyone's model. |
 | Portable | Everything in `resources/models` | Your own use, offline. Don't publish it: some models' licenses don't allow redistribution. |
 
 Model files are cached between builds, so a rebuild does not copy 3.8 GB again. Builds are not code-signed, so Windows SmartScreen will warn on first run until a signing certificate is configured.

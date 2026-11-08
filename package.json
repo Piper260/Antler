@@ -11,6 +11,7 @@
     "build": "electron-builder",
     "build-dir": "electron-builder --dir --config.directories.output=dist",
     "dist": "npm run build",
+    "make": "node scripts/build.js --menu",
     "test": "jest",
     "lint": "eslint src/ config/",
     "lint:fix": "eslint src/ config/ --fix",
@@ -63,6 +64,9 @@
   "build": {
     "appId": "com.piper.aio",
     "productName": "Antler",
+    "electronLanguages": [
+      "en-US"
+    ],
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -73,7 +77,10 @@
       "package.json",
       "!logs/**/*",
       "!tests/**/*",
-      "!**/*.test.js"
+      "!**/*.test.js",
+      "!node_modules/onnxruntime-node/bin/napi-v6/darwin/**",
+      "!node_modules/onnxruntime-node/bin/napi-v6/linux/**",
+      "!node_modules/onnxruntime-node/bin/napi-v6/win32/arm64/**"
     ],
     "asarUnpack": [
       "node_modules/onnxruntime-node/**"

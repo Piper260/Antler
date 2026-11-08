@@ -118,11 +118,13 @@ You can also place model files by hand in `resources/models/` (in a source check
 
 ## Building a release
 
+Double-click `build.bat`, or run:
+
 ```bash
-npm run build
+npm run make
 ```
 
-This writes an NSIS installer and a portable folder to `dist/`.
+The builder asks what to build, checks your setup, packages the app, and verifies the result. Installers get a `.sha256` file beside them for release notes. Use `node scripts/build.js` for a straight installer build (or `--dir` for the portable folder) without the menu, for scripts and CI. Output goes to `dist/`.
 
 | Build | Models included | Use it for |
 | --- | --- | --- |

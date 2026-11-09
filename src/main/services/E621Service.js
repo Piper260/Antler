@@ -198,6 +198,16 @@ class E621Service {
   }
 
   /**
+   * The e621 order: tag for a Sort dropdown value. 'id' (newest) is e621's
+   * default and needs none; 'training' fetches top-scored posts, which the
+   * renderer then re-ranks for training suitability.
+   */
+  static orderTag(sortBy) {
+    const orders = { score: 'order:score', favcount: 'order:favcount', random: 'order:random', training: 'order:score' };
+    return orders[sortBy] || null;
+  }
+
+  /**
    * Search posts by tags
    */
   async searchPosts(tags = [], limit = 20) {
@@ -475,6 +485,7 @@ async searchPostsByArtist(artistName, options = {}) {
     page = 1,
     rating = null, // 's', 'q', 'e', or null for all
     minScore = null,
+    sortBy = 'id',
     additionalTags = []
   } = options;
 
@@ -493,6 +504,9 @@ async searchPostsByArtist(artistName, options = {}) {
     if (minScore !== null) {
       searchTags.push(`score:>=${minScore}`);
     }
+
+    const order = E621Service.orderTag(sortBy);
+    if (order) searchTags.push(order);
     
     // Add any additional tags
     if (additionalTags.length > 0) {
@@ -541,6 +555,7 @@ async searchPostsByCharacter(characterName, options = {}) {
     page = 1,
     rating = null,
     minScore = null,
+    sortBy = 'id',
     additionalTags = []
   } = options;
 
@@ -560,6 +575,9 @@ async searchPostsByCharacter(characterName, options = {}) {
     if (minScore !== null) {
       searchTags.push(`score:>=${minScore}`);
     }
+
+    const order = E621Service.orderTag(sortBy);
+    if (order) searchTags.push(order);
     
     // Add any additional tags
     if (additionalTags.length > 0) {

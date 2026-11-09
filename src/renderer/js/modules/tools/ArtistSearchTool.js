@@ -47,7 +47,7 @@ class ArtistSearchTool extends BaseTool {
       rating: '',
       minScore: null,
       fileType: '',
-      sortBy: 'id'
+      sortBy: 'training'
     };
     
     // Infinite scroll
@@ -160,6 +160,7 @@ class ArtistSearchTool extends BaseTool {
       'toggle-selection-mode', 'selection-mode-text',
       'select-all-visible-btn', 'select-range-btn', 'select-pattern-btn', 'invert-selection-btn',
       'select-all-btn', 'select-existed-btn', 'deselect-all-btn',
+      'top-n-input', 'select-top-btn',
 
       // Category (subfolder) assignment
       'category-toolbar-divider', 'bulk-category-select', 'apply-category-btn',
@@ -277,6 +278,10 @@ class ArtistSearchTool extends BaseTool {
 
     this.on(this.elements.deselect_all_btn, 'click', () => {
       this.deselectAllPosts();
+    });
+
+    this.on(this.elements.select_top_btn, 'click', () => {
+      this.selectTopPosts();
     });
 
     // Enhanced batch selection tools
@@ -505,7 +510,7 @@ applyFilters() {
   this.searchFilters = {
     rating: this.elements.rating_filter?.value || '',
     minScore: this.elements.min_score_filter?.value ? safeParseInt(this.elements.min_score_filter.value, null) : null,
-    sortBy: this.elements.sort_filter?.value || 'id'
+    sortBy: this.elements.sort_filter?.value || 'training'
   };
   
   // Re-run search with filters
@@ -564,7 +569,7 @@ async searchArtist() {
   
   try {
     const options = {
-      limit: this.postsPerPage,
+      limit: this.pageLimit(),
       page: this.currentPage,
       includeFileUrls: true,
       includeMetadata: true,
@@ -581,6 +586,7 @@ async searchArtist() {
     }
     
     if (result.success) {
+      result.posts = this.prepareResults(result.posts);
       this.currentPosts = result.posts;
       this.currentPagination = result.pagination; // Save pagination data
       this.hasMore = result.pagination.hasMore;
@@ -615,6 +621,24 @@ async searchArtist() {
   } finally {
     this.hideLoading();
   }
+}
+
+/**
+ * Posts per request. Training sort pulls e621's maximum so there are more
+ * top-scored posts to rank before the first page is shown.
+ */
+pageLimit() {
+  return this.searchFilters.sortBy === 'training' ? 320 : this.postsPerPage;
+}
+
+/**
+ * Score a batch for training (sets post.training) and, when sorting by
+ * training, return it best first.
+ */
+prepareResults(posts) {
+  if (!window.TrainingScore) return posts;
+  const ranked = window.TrainingScore.rankPosts(posts, this.searchMode);
+  return this.searchFilters.sortBy === 'training' ? ranked : posts;
 }
 
 /**
@@ -852,6 +876,16 @@ createPostElement(post, index) {
   }
   
   postDiv.appendChild(img);
+
+  // Training score (bottom-right), with the reasons in the tooltip
+  if (post.training) {
+    const scoreBadge = document.createElement('div');
+    scoreBadge.className = 'post-training-score';
+    if (post.training.excluded) scoreBadge.classList.add('excluded');
+    scoreBadge.textContent = post.training.excluded ? 'n/a' : post.training.score;
+    scoreBadge.title = window.TrainingScore.describe(post.training);
+    postDiv.appendChild(scoreBadge);
+  }
 
   // Persistent category badge (bottom-left corner) - only visible once a
   // non-root category has been assigned to this post
@@ -1264,7 +1298,7 @@ async loadMorePosts() {
       ? this.currentTagFilter.split(/[\s,]+/).map(t => t.trim()).filter(Boolean)
       : [];
     const options = {
-      limit: this.postsPerPage,
+      limit: this.pageLimit(),
       page: nextPage,
       includeFileUrls: true,
       includeMetadata: true,
@@ -1280,6 +1314,8 @@ async loadMorePosts() {
     }
     
     if (result.success && result.posts.length > 0) {
+      // Each page is ranked on its own; existing cards keep their places.
+      result.posts = this.prepareResults(result.posts);
       // Add new posts to current posts array
       this.currentPosts.push(...result.posts);
       this.currentPage = nextPage;

@@ -240,6 +240,39 @@ async selectExistedPosts() {
 }
 
 /**
+ * Select the N loaded posts with the highest training scores (videos and
+ * other excluded posts are never picked). Replaces the current selection.
+ */
+selectTopPosts() {
+  const count = safeParseInt(this.elements.top_n_input?.value, 0);
+  if (count < 1) {
+    this.showToast('Enter how many posts to select', 'warning');
+    return;
+  }
+
+  const top = this.currentPosts
+    .filter(post => post.training && !post.training.excluded)
+    .sort((a, b) => b.training.score - a.training.score)
+    .slice(0, count);
+
+  if (!top.length) {
+    this.showToast('No scored posts loaded', 'warning');
+    return;
+  }
+
+  this.selectedPosts.clear();
+  document.querySelectorAll('.post-thumbnail.selected').forEach(element => element.classList.remove('selected'));
+  top.forEach(post => {
+    this.selectedPosts.add(post.id);
+    this.updatePostSelectionUI(post.id);
+  });
+
+  this.updateSelectionUI();
+  const lowest = top[top.length - 1].training.score;
+  this.showToast(`Selected top ${top.length} post${top.length !== 1 ? 's' : ''} (score ${lowest}+)`, 'success');
+}
+
+/**
  * Deselect all posts
  */
 deselectAllPosts() {

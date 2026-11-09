@@ -93,6 +93,7 @@ export default class ArtistSearchTemplate {
                     <option value="explicit">Explicit</option>
                   </select>
                   <select class="posts-filter-control" id="sort-filter">
+                    <option value="training">Sort: Best for training</option>
                     <option value="id">Sort: Newest</option>
                     <option value="score">Sort: Score</option>
                     <option value="favcount">Sort: Favs</option>
@@ -111,6 +112,9 @@ export default class ArtistSearchTemplate {
                   <button class="btn btn-sm btn-secondary" id="select-existed-btn" title="Select all posts that already exist on disk">Existed</button>
                   <button class="btn btn-sm btn-secondary" id="invert-selection-btn">Invert</button>
                   <button class="btn btn-sm btn-secondary" id="select-pattern-btn">Pattern</button>
+                  <div class="toolbar-divider"></div>
+                  <input type="number" class="posts-filter-control posts-filter-top" id="top-n-input" value="50" min="1" title="How many of the highest training scores to select">
+                  <button class="btn btn-sm btn-secondary" id="select-top-btn" title="Select the posts with the highest training scores">Select top</button>
                   <div class="toolbar-divider" id="category-toolbar-divider" style="display: none;"></div>
                   <select class="posts-filter-control" id="bulk-category-select" style="display: none;" title="Category folder to apply to selected posts">
                     <option value="">Category: (root)</option>

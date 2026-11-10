@@ -67,6 +67,32 @@ class AppPageTemplates {
           </div>
         </div>
 
+        <!-- Inkbunny Login -->
+        <div class="settings-section">
+          <h3><i class="fas fa-key"></i> Inkbunny Login</h3>
+          <p class="text-muted mb-3">Optional. Without a login, Inkbunny search runs as a guest and only shows General-rated work. With one, it shows what your account's rating settings allow.</p>
+
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input type="text" class="form-input" id="inkbunny-username" placeholder="Your Inkbunny username" autocomplete="off">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" class="form-input" id="inkbunny-password" placeholder="Your Inkbunny password" autocomplete="off">
+            <small class="form-help">Turn on "Enable API access" in your Inkbunny account settings first. The password is stored encrypted on this computer.</small>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn btn-primary" id="test-inkbunny-btn">
+              <i class="fas fa-flask"></i>
+              Test Login
+            </button>
+          </div>
+
+          <div class="credentials-status" id="inkbunny-status" style="display: none;"></div>
+        </div>
+
         <!-- Hugging Face AI Configuration -->
         <div class="settings-section">
           <h3><i class="fas fa-robot"></i> Hugging Face AI Configuration</h3>

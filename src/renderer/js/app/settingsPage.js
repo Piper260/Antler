@@ -82,6 +82,11 @@ class AppSettingsPage {
       const debugModeCheck = document.getElementById('debug-mode');
       const cacheEnabledCheck = document.getElementById('cache-enabled');
       
+      const ibUser = document.getElementById('inkbunny-username');
+      const ibPass = document.getElementById('inkbunny-password');
+      if (ibUser) ibUser.value = settings.inkbunny?.username || '';
+      if (ibPass) ibPass.value = settings.inkbunny?.password || '';
+
       if (themeSelect) this.setupThemePicker(themeSelect, settings.app?.theme);
       if (notificationsCheck) notificationsCheck.checked = settings.app?.notifications !== false;
       if (autoSaveCheck) autoSaveCheck.checked = settings.app?.autoSave !== false;
@@ -148,6 +153,11 @@ class AppSettingsPage {
     
     if (testE621Btn) {
       testE621Btn.addEventListener('click', () => this.testE621Credentials());
+    }
+
+    const testInkbunnyBtn = document.getElementById('test-inkbunny-btn');
+    if (testInkbunnyBtn) {
+      testInkbunnyBtn.addEventListener('click', () => this.testInkbunnyLogin());
     }
     
     if (testAIBtn) {
@@ -278,6 +288,36 @@ class AppSettingsPage {
 }
 
   /**
+   * Test the Inkbunny username and password in the form (not saved).
+   */
+  async testInkbunnyLogin() {
+    const button = document.getElementById('test-inkbunny-btn');
+    const status = document.getElementById('inkbunny-status');
+    const username = document.getElementById('inkbunny-username')?.value.trim() || '';
+    const password = document.getElementById('inkbunny-password')?.value || '';
+    const show = (message, type) => {
+      if (!status) return;
+      status.style.display = 'block';
+      status.className = `credentials-status text-${type}`;
+      status.textContent = message;
+    };
+    if (!username || !password) {
+      show('Enter both username and password', 'error');
+      return;
+    }
+    if (button) button.disabled = true;
+    show('Testing login...', 'info');
+    try {
+      const result = await window.electronAPI.inkbunny.testLogin(username, password);
+      show(result.message, result.success ? 'success' : 'error');
+    } catch (error) {
+      show(`Could not test the login: ${error.message}`, 'error');
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  /**
    * Save all settings at once (unified save)
    */
   async saveAllSettings() {
@@ -293,6 +333,8 @@ class AppSettingsPage {
     const aiModel = document.getElementById('hf-model-select')?.value || 'Qwen/Qwen3.8-27B';
     const aiTemp = parseFloat(document.getElementById('ai-temperature-slider')?.value) || 0.7;
     const aiCustomModels = this._getCustomModelsFromUI();
+    const inkbunnyUsername = document.getElementById('inkbunny-username')?.value.trim() || '';
+    const inkbunnyPassword = document.getElementById('inkbunny-password')?.value || '';
     
     console.log('📝 Form values being saved:', {
       e621Username,
@@ -307,6 +349,10 @@ class AppSettingsPage {
       e621: {
         username: e621Username,
         apiKey: e621ApiKey
+      },
+      inkbunny: {
+        username: inkbunnyUsername,
+        password: inkbunnyPassword
       },
       huggingface: {
         apiToken: aiToken,

@@ -103,6 +103,25 @@ const electronAPI = {
     searchTags: (query, limit) => safeInvoke('e621:search-tags', query, limit)
   },
 
+  inkbunny: {
+    searchByArtist: (artistName, options) => safeInvoke('inkbunny:search-by-artist', artistName, options),
+    searchByCharacter: (characterName, options) => safeInvoke('inkbunny:search-by-character', characterName, options),
+    getArtistSuggestions: (query, limit) => safeInvoke('inkbunny:artist-suggestions', query, limit),
+    testLogin: (username, password) => safeInvoke('inkbunny:test-login', username, password)
+  },
+
+  pawchive: {
+    searchByArtist: (artistName, options) => safeInvoke('pawchive:search-by-artist', artistName, options),
+    searchByCharacter: (characterName, options) => safeInvoke('pawchive:search-by-character', characterName, options),
+    getArtistSuggestions: (query, limit) => safeInvoke('pawchive:artist-suggestions', query, limit),
+    findCreators: (name, limit) => safeInvoke('pawchive:find-creators', name, limit),
+    getLink: (artist) => safeInvoke('pawchive:get-link', artist),
+    setLink: (artist, creator) => safeInvoke('pawchive:set-link', artist, creator),
+    findUpgrades: (args) => safeInvoke('pawchive:find-upgrades', args),
+    recordDecision: (postId, hash, answer, distance) => safeInvoke('pawchive:record-decision', postId, hash, answer, distance),
+    onUpgradeProgress: (callback) => safeOn('pawchive:upgrade-progress', callback)
+  },
+
   // Update API
   update: {
     getStatus: () => safeInvoke('update:get-status'),

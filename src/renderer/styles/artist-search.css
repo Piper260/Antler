@@ -350,6 +350,154 @@
   cursor: pointer;
 }
 
+/* Pawchive match on a card (top-left); click to compare */
+.post-upgrade-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 3;
+  padding: 1px 6px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.75);
+  color: #ffffff;
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.post-upgrade-badge.status-upgrade {
+  background: var(--accent-primary);
+}
+
+.post-upgrade-badge.status-ask {
+  outline: 1px solid #ffffff;
+}
+
+.post-upgrade-badge.status-same,
+.post-upgrade-badge.status-variant {
+  color: #c8c8c8;
+}
+
+/* Upgrade summary, under the download bar */
+.posts-upgrade-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-primary);
+}
+
+.posts-upgrade-text {
+  margin-right: auto;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Upgrade modal: creator picker and side-by-side review */
+.image-preview-modal.upgrade-modal .modal-content {
+  width: min(1200px, 100%);
+}
+
+.image-preview-modal.upgrade-modal .modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.upgrade-modal-count {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.image-preview-modal.upgrade-modal .upgrade-modal-body {
+  display: block;
+  min-height: 0;
+  padding: 16px;
+}
+
+.image-preview-modal.upgrade-modal .upgrade-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.upgrade-muted {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.upgrade-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.upgrade-compare figure {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  min-width: 0;
+}
+
+.upgrade-compare img {
+  width: 100%;
+  height: calc(100vh - 300px);
+  min-height: 240px;
+  object-fit: contain;
+  background: var(--bg-primary);
+}
+
+.upgrade-compare figcaption {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.upgrade-answers {
+  display: flex;
+  gap: 8px;
+}
+
+.upgrade-creator-search {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.upgrade-creator-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.upgrade-creator {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.upgrade-creator:hover {
+  border-color: var(--accent-primary);
+}
+
 /* Full-size preview */
 .image-preview-modal {
   position: fixed;

@@ -102,7 +102,15 @@ async fetchArtistSuggestions(query) {
     
     let result;
     try {
-      if (this.searchMode === 'artist') {
+      if (this.source === 'inkbunny' || this.source === 'pawchive') {
+        // Both can suggest artist names, but have no character tags to suggest.
+        if (this.searchMode !== 'artist') {
+          this.hideSuggestions();
+          return;
+        }
+        const names = await window.electronAPI[this.source].getArtistSuggestions(normalizedQuery, this.maxSuggestions);
+        result = { success: true, suggestions: names };
+      } else if (this.searchMode === 'artist') {
         result = await window.electronAPI.e621.getArtistSuggestions(normalizedQuery, this.maxSuggestions);
       } else {
         // For character search, we use tag suggestions with character category

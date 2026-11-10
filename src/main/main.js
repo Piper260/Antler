@@ -12,6 +12,11 @@ const SettingsService = require('./services/SettingsService');
 const SettingsIPC = require('./ipc/SettingsIPC');
 const E621Service = require('./services/E621Service');
 const E621IPC = require('./ipc/E621IPC');
+const InkbunnyService = require('./services/InkbunnyService');
+const InkbunnyIPC = require('./ipc/InkbunnyIPC');
+const PawchiveService = require('./services/PawchiveService');
+const UpgradeFinder = require('./services/UpgradeFinder');
+const PawchiveIPC = require('./ipc/PawchiveIPC');
 const UtilsIPC = require('./ipc/UtilsIPC');
 const TagEditorIPC = require('./ipc/TagEditorIPC');
 const { UpdateService } = require('./services/UpdateService');
@@ -92,12 +97,13 @@ function configureCachePath() {
 
 // e621's image CDN rejects (403) cross-site no-cors requests that lack an
 // e621 Referer. The renderer is loaded from file://, so <img> requests carry
-// no Referer and every thumbnail fails. Supply one for e621 image hosts.
+// no Referer and every thumbnail fails. Supply one for e621 image hosts, and
+// the same for Pawchive's image and file servers.
 function configureImageReferer() {
-  const filter = { urls: ['https://static1.e621.net/*', 'https://static1.e926.net/*'] };
+  const filter = { urls: ['https://static1.e621.net/*', 'https://static1.e926.net/*', 'https://*.pawchive.pw/*'] };
   session.defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
-    const requestHeaders = { ...details.requestHeaders, Referer: 'https://e621.net/' };
-    callback({ requestHeaders });
+    const referer = details.url.includes('pawchive.pw') ? 'https://pawchive.pw/' : 'https://e621.net/';
+    callback({ requestHeaders: { ...details.requestHeaders, Referer: referer } });
   });
 }
 
@@ -182,6 +188,9 @@ async function setupServices() {
   // Initialize IPC handlers
   settingsIPC = new SettingsIPC(settingsService);
   e621IPC = new E621IPC(e621Service);
+  new InkbunnyIPC(new InkbunnyService(settingsService), settingsService);
+  const pawchiveService = new PawchiveService();
+  new PawchiveIPC(pawchiveService, new UpgradeFinder(pawchiveService, path.join(app.getPath('userData'), 'pawchive-upgrades.json')));
   utilsIPC = new UtilsIPC(settingsService);
   tagEditorIPC = new TagEditorIPC(settingsService);
   updateIPC = new UpdateIPC(updateService);

@@ -9,7 +9,7 @@ const { resolveLibraries } = require('../utils/datasetLibraries');
 // These are encrypted at rest via Electron's OS-backed safeStorage; the
 // in-memory `this.settings` object always holds plaintext values so the
 // rest of the app doesn't need to know about encryption.
-const SECRET_PATHS = ['e621.apiKey', 'huggingface.apiToken'];
+const SECRET_PATHS = ['e621.apiKey', 'huggingface.apiToken', 'inkbunny.password'];
 // What the renderer sees in place of a saved secret. Secrets never leave the
 // main process: the settings form shows this mask, and a mask sent back
 // means "keep the saved value" (see redactSecrets / unmaskSecrets).
@@ -44,6 +44,11 @@ class SettingsService {
       e621: {
         username: '',
         apiKey: ''
+      },
+      // Optional; without it Inkbunny is searched as a guest (General only).
+      inkbunny: {
+        username: '',
+        password: ''
       },
       huggingface: {
         apiToken: '',

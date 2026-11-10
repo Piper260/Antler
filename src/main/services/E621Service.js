@@ -40,12 +40,12 @@ class E621Service {
   /**
    * Make authenticated request to E621 API
    */
-  async makeRequest(endpoint) {
+  async makeRequest(endpoint, baseUrl = this.baseUrl) {
     // Apply rate limiting
     await this.waitForRateLimit();
     
     const credentials = this.getCredentials();
-    const url = `${this.baseUrl}${endpoint}`;
+    const url = `${baseUrl}${endpoint}`;
     
     console.log(`📡 Making E621 API request: ${url}`);
     
@@ -202,6 +202,11 @@ class E621Service {
    * default and needs none; 'training' fetches top-scored posts, which the
    * renderer then re-ranks for training suitability.
    */
+  static siteUrl(site) {
+    // e926 is e621's safe-only mirror: same API, same accounts.
+    return site === 'e926' ? 'https://e926.net' : 'https://e621.net';
+  }
+
   static orderTag(sortBy) {
     const orders = { score: 'order:score', favcount: 'order:favcount', random: 'order:random', training: 'order:score' };
     return orders[sortBy] || null;
@@ -486,6 +491,7 @@ async searchPostsByArtist(artistName, options = {}) {
     rating = null, // 's', 'q', 'e', or null for all
     minScore = null,
     sortBy = 'id',
+    site = 'e621',
     additionalTags = []
   } = options;
 
@@ -520,7 +526,7 @@ async searchPostsByArtist(artistName, options = {}) {
     
     console.log(`🔗 API endpoint: ${this.baseUrl}${endpoint}`);
     
-    const response = await this.makeRequest(endpoint);
+    const response = await this.makeRequest(endpoint, E621Service.siteUrl(site));
     
     if (response && response.posts) {
       console.log(`✅ Found ${response.posts.length} posts by ${artistName}`);
@@ -556,6 +562,7 @@ async searchPostsByCharacter(characterName, options = {}) {
     rating = null,
     minScore = null,
     sortBy = 'id',
+    site = 'e621',
     additionalTags = []
   } = options;
 
@@ -591,7 +598,7 @@ async searchPostsByCharacter(characterName, options = {}) {
     
     console.log(`🔗 Character search endpoint: ${this.baseUrl}${endpoint}`);
     
-    const response = await this.makeRequest(endpoint);
+    const response = await this.makeRequest(endpoint, E621Service.siteUrl(site));
     
     if (response && response.posts) {
       console.log(`✅ Found ${response.posts.length} posts featuring ${characterName}`);

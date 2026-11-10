@@ -47,6 +47,12 @@ export default class ArtistSearchTemplate {
                   </label>
                   <span class="mode-label" id="label-character">Character</span>
                 </div>
+                <select class="posts-filter-control" id="source-select" title="Site to search. e926 is e621's safe-only mirror; Inkbunny without a login in Settings only shows General-rated work; Pawchive has no scores or ratings, and character search there is a text search.">
+                  <option value="e621">e621</option>
+                  <option value="e926">e926 (safe)</option>
+                  <option value="inkbunny">Inkbunny</option>
+                  <option value="pawchive">Pawchive</option>
+                </select>
               </div>
             </div>
             
@@ -115,6 +121,8 @@ export default class ArtistSearchTemplate {
                   <div class="toolbar-divider"></div>
                   <input type="number" class="posts-filter-control posts-filter-top" id="top-n-input" value="50" min="1" title="How many of the highest training scores to select">
                   <button class="btn btn-sm btn-secondary" id="select-top-btn" title="Select the posts with the highest training scores">Select top</button>
+                  <div class="toolbar-divider" id="upgrade-divider"></div>
+                  <button class="btn btn-sm btn-secondary" id="find-upgrades-btn" title="Look for larger copies of these posts on Pawchive. Run it again after loading more posts.">Find upgrades</button>
                   <div class="toolbar-divider" id="category-toolbar-divider" style="display: none;"></div>
                   <select class="posts-filter-control" id="bulk-category-select" style="display: none;" title="Category folder to apply to selected posts">
                     <option value="">Category: (root)</option>
@@ -135,6 +143,13 @@ export default class ArtistSearchTemplate {
                   <button class="btn btn-sm btn-primary" id="download-selected-btn" disabled>
                     <i class="fas fa-download"></i> <span id="download-selected-text">Download</span>
                   </button>
+                </div>
+
+                <div class="posts-upgrade-bar" id="upgrade-bar" style="display: none;">
+                  <span class="posts-upgrade-text" id="upgrade-bar-text"></span>
+                  <button class="btn btn-sm btn-secondary" id="change-creator-btn" title="Link this artist to a different Pawchive creator">Change creator</button>
+                  <button class="btn btn-sm btn-secondary" id="select-upgrades-btn" title="Select every post that will download from Pawchive">Select upgrades</button>
+                  <button class="btn btn-sm btn-primary" id="review-upgrades-btn" title="Compare the uncertain pairs one by one">Review</button>
                 </div>
               </div>
               

@@ -6,6 +6,7 @@ import ArtistSearchCategories from './artist-search/categories.js';
 import ArtistSearchSelection from './artist-search/selection.js';
 import ArtistSearchPreview from './artist-search/preview.js';
 import ArtistSearchDownloads from './artist-search/downloads.js';
+import ArtistSearchUpgrades from './artist-search/upgrades.js';
 
 console.log('🔧 ArtistSearchTool module loading...');
 
@@ -38,8 +39,17 @@ class ArtistSearchTool extends BaseTool {
     
     // Search mode state
     this.searchMode = 'artist'; // 'artist' or 'character'
+    // Site searched: 'e621', 'e926', 'inkbunny' or 'pawchive'
+    this.source = 'e621';
+    try { this.source = localStorage.getItem('antler-search-source') || 'e621'; } catch (_) { /* default */ }
     this.recentCharacters = new Set();
-    
+
+    // Pawchive upgrades for e621 results (see artist-search/upgrades.js)
+    this.upgradeResults = new Map(); // postId -> match result
+    this.upgradeRun = null;
+    this.upgradeBusy = false;
+    this.reviewSession = { same: 0, variant: 0, different: 0 };
+
     // Additional tag refinement
     this.currentTagFilter = '';
     
@@ -150,7 +160,7 @@ class ArtistSearchTool extends BaseTool {
   initElements() {
     const elementIds = [
       'artist-input', 'search-btn',
-      'mode-toggle-input', 'label-artist', 'label-character',
+      'mode-toggle-input', 'label-artist', 'label-character', 'source-select',
       'search-input-label', 'search-help-text',
       'suggestions-dropdown', 'popular-artists-btn', 'recent-artists-btn',
       'results-section', 'loading-state', 'posts-grid', 'error-state',
@@ -161,6 +171,10 @@ class ArtistSearchTool extends BaseTool {
       'select-all-visible-btn', 'select-range-btn', 'select-pattern-btn', 'invert-selection-btn',
       'select-all-btn', 'select-existed-btn', 'deselect-all-btn',
       'top-n-input', 'select-top-btn',
+
+      // Pawchive upgrades
+      'find-upgrades-btn', 'upgrade-divider', 'upgrade-bar', 'upgrade-bar-text', 'review-upgrades-btn',
+      'select-upgrades-btn', 'change-creator-btn',
 
       // Category (subfolder) assignment
       'category-toolbar-divider', 'bulk-category-select', 'apply-category-btn',
@@ -202,6 +216,11 @@ class ArtistSearchTool extends BaseTool {
     this.on(this.elements.mode_toggle_input, 'change', (e) => {
       const mode = e.target.checked ? 'character' : 'artist';
       this.setSearchMode(mode);
+    });
+
+    if (this.elements.source_select) this.elements.source_select.value = this.source;
+    this.on(this.elements.source_select, 'change', (e) => {
+      this.setSource(e.target.value);
     });
 
     // Click handlers for labels to toggle mode
@@ -283,6 +302,12 @@ class ArtistSearchTool extends BaseTool {
     this.on(this.elements.select_top_btn, 'click', () => {
       this.selectTopPosts();
     });
+
+    this.on(this.elements.find_upgrades_btn, 'click', () => this.findUpgrades());
+    this.on(this.elements.review_upgrades_btn, 'click', () => this.openReview());
+    this.on(this.elements.select_upgrades_btn, 'click', () => this.selectUpgradedPosts());
+    this.on(this.elements.change_creator_btn, 'click', () => this.changeCreator());
+    this.updateUpgradeButton();
 
     // Enhanced batch selection tools
     this.on(this.elements.toggle_selection_mode, 'click', () => {
@@ -401,7 +426,8 @@ class ArtistSearchTool extends BaseTool {
     console.log(`🔄 Switching search mode to: ${mode}`);
     
     this.searchMode = mode;
-    
+    this.updateUpgradeButton?.();
+
     // Update toggle state
     if (this.elements.mode_toggle_input) {
       this.elements.mode_toggle_input.checked = (mode === 'character');
@@ -556,6 +582,7 @@ async searchArtist() {
   this.totalPostCount = 0;
   this.postCategories.clear();
   this.availableCategories = [];
+  this.resetUpgrades();
 
   // Fetch total count in background
   this.fetchTotalCount(artistName);
@@ -577,18 +604,13 @@ async searchArtist() {
       ...(additionalTags.length > 0 ? { additionalTags } : {})
     };
     
-    let result;
-    if (this.searchMode === 'artist') {
-      result = await window.electronAPI.e621.searchByArtist(artistName, options);
-    } else {
-      // For character search, use the character tag search
-      result = await window.electronAPI.e621.searchByCharacter(artistName, options);
-    }
+    const result = await this.searchSource(artistName, options);
     
     if (result.success) {
       result.posts = this.prepareResults(result.posts);
       this.currentPosts = result.posts;
       this.currentPagination = result.pagination; // Save pagination data
+      if (this.source === 'inkbunny') this.totalPostCount = result.pagination.totalCount || 0;
       this.hasMore = result.pagination.hasMore;
       
       this.displayPosts(result.posts, false); // false = replace existing posts
@@ -632,6 +654,41 @@ pageLimit() {
 }
 
 /**
+ * Run an artist/character search on the chosen site. Inkbunny pages are
+ * always 100 posts (its maximum), whatever the limit asks.
+ */
+searchSource(name, options) {
+  const character = this.searchMode !== 'artist';
+  if (this.source === 'pawchive') {
+    return character
+      ? window.electronAPI.pawchive.searchByCharacter(name, options)
+      : window.electronAPI.pawchive.searchByArtist(name, options);
+  }
+  if (this.source === 'inkbunny') {
+    return character
+      ? window.electronAPI.inkbunny.searchByCharacter(name, options)
+      : window.electronAPI.inkbunny.searchByArtist(name, options);
+  }
+  const siteOptions = { ...options, site: this.source };
+  return character
+    ? window.electronAPI.e621.searchByCharacter(name, siteOptions)
+    : window.electronAPI.e621.searchByArtist(name, siteOptions);
+}
+
+/**
+ * Switch the site searched; clears the results like switching mode does.
+ */
+setSource(source) {
+  this.source = ['e621', 'e926', 'inkbunny', 'pawchive'].includes(source) ? source : 'e621';
+  try { localStorage.setItem('antler-search-source', this.source); } catch (_) { /* not remembered */ }
+  this.suggestionCache?.clear();
+  this.setSearchMode(this.searchMode);
+  this.updateUpgradeButton?.();
+  const names = { e621: 'e621', e926: 'e926', inkbunny: 'Inkbunny', pawchive: 'Pawchive' };
+  this.updateStatus(`Ready - searching ${names[this.source]}`);
+}
+
+/**
  * Score a batch for training (sets post.training) and, when sorting by
  * training, return it best first.
  */
@@ -645,6 +702,9 @@ prepareResults(posts) {
  * Fetch total post count for artist/character
  */
 async fetchTotalCount(name) {
+  // Inkbunny's search reports its own total and Pawchive gives none;
+  // e621's tag counts don't apply to either.
+  if (this.source === 'inkbunny' || this.source === 'pawchive') return;
   try {
     const category = this.searchMode === 'artist' ? 'artist' : 'character';
     // Fetch suggestions to find the exact tag count
@@ -886,6 +946,9 @@ createPostElement(post, index) {
     scoreBadge.title = window.TrainingScore.describe(post.training);
     postDiv.appendChild(scoreBadge);
   }
+
+  // Pawchive match (top-left), once upgrades have been looked for
+  this.addUpgradeBadge(postDiv, post);
 
   // Persistent category badge (bottom-left corner) - only visible once a
   // non-root category has been assigned to this post
@@ -1306,12 +1369,7 @@ async loadMorePosts() {
       ...(additionalTags.length > 0 ? { additionalTags } : {})
     };
     
-    let result;
-    if (this.searchMode === 'artist') {
-      result = await window.electronAPI.e621.searchByArtist(this.currentArtist, options);
-    } else {
-      result = await window.electronAPI.e621.searchByCharacter(this.currentArtist, options);
-    }
+    const result = await this.searchSource(this.currentArtist, options);
     
     if (result.success && result.posts.length > 0) {
       // Each page is ranked on its own; existing cards keep their places.
@@ -1489,7 +1547,7 @@ cleanup() {
 }
 
 window.mixMethods(ArtistSearchTool, ArtistSearchTemplate, ArtistSearchSuggestions, ArtistSearchCategories,
-  ArtistSearchSelection, ArtistSearchPreview, ArtistSearchDownloads);
+  ArtistSearchSelection, ArtistSearchPreview, ArtistSearchDownloads, ArtistSearchUpgrades);
 
 // Export the tool class
 window.ArtistSearchTool = ArtistSearchTool;

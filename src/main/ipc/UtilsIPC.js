@@ -111,6 +111,38 @@ class UtilsIPC {
     return images;
   }
 
+  /**
+   * A download that replaces a copy in another format (a Pawchive PNG for an
+   * e621 JPG) moves the old copy, and its name only, into bak/ beside it, so
+   * the dataset doesn't hold the picture twice.
+   */
+  async retireReplacedImages(filePath, replaces) {
+    if (!Array.isArray(replaces) || replaces.length === 0) return;
+    const dir = path.dirname(filePath);
+    const ext = path.extname(filePath);
+    const base = path.basename(filePath, ext);
+    for (const old of replaces) {
+      const oldExt = String(old || '').toLowerCase();
+      if (!/^[a-z0-9]{2,5}$/.test(oldExt) || `.${oldExt}` === ext.toLowerCase()) continue;
+      const oldName = requireFileName(`${base}.${oldExt}`, MEDIA_EXTENSIONS);
+      const oldPath = path.join(dir, oldName);
+      try {
+        await fs.access(oldPath);
+      } catch (_) {
+        continue; // not on disk
+      }
+      const bakDir = path.join(dir, 'bak');
+      await fs.mkdir(bakDir, { recursive: true });
+      try {
+        await fs.rename(oldPath, path.join(bakDir, oldName));
+      } catch (_) {
+        await fs.copyFile(oldPath, path.join(bakDir, oldName));
+        await fs.unlink(oldPath);
+      }
+      console.log(`🗂️ Moved replaced ${oldName} to bak/`);
+    }
+  }
+
   setupHandlers() {
     // Download image from URL
     ipcMain.handle('utils:download-image', async (event, data) => {
@@ -163,7 +195,8 @@ class UtilsIPC {
               try {
                 const buffer = Buffer.concat(chunks);
                                 await writeFileSafe(filePath, buffer);
-                
+                await this.retireReplacedImages(filePath, data.replaces);
+
                 console.log(`✅ Image saved: ${filePath} (${buffer.length} bytes)`);
                 
                 resolve({

@@ -116,12 +116,17 @@ async downloadPostImage(post, folderPath) {
   const downloadType = this.getDownloadType();
   const subFolder = this.postCategories.get(post.id) || '';
 
+  // A Pawchive upgrade may be another format than the e621 copy already on
+  // disk; that copy is moved to bak/ rather than kept beside it.
+  const replaces = post.upgrade?.applied && post.upgrade.originalType ? [post.upgrade.originalType] : [];
+
   const result = await window.electronAPI.utils.downloadImage({
     url: imageUrl,
     artistName: folderName,
     fileName,
     downloadType,
-    subFolder
+    subFolder,
+    replaces
   });
 
   if (!result.success) {

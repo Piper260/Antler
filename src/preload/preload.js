@@ -352,6 +352,16 @@ const electronAPI = {
     scanFolder: (folderPath)                   => safeInvoke('image-organizer:scan-folder', folderPath),
     organize:   (operations, outputPath, mode) => safeInvoke('image-organizer:organize',    operations, outputPath, mode),
     openFolder: (folderPath)                   => safeInvoke('image-organizer:open-folder', folderPath)
+  },
+
+  // Image Organizer's dataset check (main/ipc/DatasetHealthIPC.js)
+  datasetHealth: {
+    scan: (options) => safeInvoke('dataset-health:scan', options),
+    stop: () => safeInvoke('dataset-health:stop'),
+    move: (datasetPath, kind, files) => safeInvoke('dataset-health:move', datasetPath, kind, files),
+    dedupe: (datasetPath, files) => safeInvoke('dataset-health:dedupe', datasetPath, files),
+    tag: (datasetPath, files, options) => safeInvoke('dataset-health:tag', datasetPath, files, options),
+    onProgress: (callback) => safeOn('dataset-health:progress', callback)
   }
 };
 

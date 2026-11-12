@@ -3,6 +3,8 @@
 // names, lets the user review assignments, then copies/moves files into
 // per-artist subfolders.
 
+import ImageOrganizerDatasetCheck from './image-organizer/datasetCheck.js';
+
 console.log('🔧 ImageOrganizerTool module loading...');
 
 class ImageOrganizerTool {
@@ -10,7 +12,7 @@ class ImageOrganizerTool {
     this.name = 'Image Organizer';
     this.id = 'image-organizer';
     this.icon = 'fas fa-folder-tree';
-    this.description = 'Scan generated images, detect artist metadata, and organize into folders';
+    this.description = 'Check your datasets for missing captions, strays and duplicates, or sort generated images by artist';
     this.version = '1.0.0';
 
     this.images = [];        // array of image result objects from IPC scan
@@ -35,6 +37,7 @@ class ImageOrganizerTool {
 
   destroy() {
     this.images = [];
+    this._offCheckProgress?.();
     console.log('🧹 Image Organizer Tool cleaned up');
   }
 
@@ -47,15 +50,22 @@ class ImageOrganizerTool {
         <!-- Setup Panel (shown when no scan has been done) -->
         <div class="imo-setup" id="imo-setup">
           <div class="imo-setup-inner">
-            <i class="fas fa-folder-open imo-setup-icon"></i>
-            <h2 class="imo-setup-title">Image Output Organizer</h2>
+            <i class="fas fa-folder-tree imo-setup-icon"></i>
+            <h2 class="imo-setup-title">Check Your Datasets</h2>
             <p class="imo-setup-sub">
-              Select a root folder — all subfolders will be crawled automatically. The tool reads
-              embedded metadata (Stable Diffusion parameters, LoRA tags, artist prompts) and lets
-              you organize images into per-artist subfolders, preserving the original subfolder
-              structure beneath each artist.
+              Looks through every dataset in your libraries and lists what needs attention:
+              images without captions, captions left behind, repeated tags, duplicates, videos
+              and small images. Each comes with a quick fix, such as tagging with Hydra.
             </p>
-            <button class="btn btn-primary imo-btn imo-btn-primary imo-browse-btn" id="imo-browse-btn">
+            <button class="btn btn-primary imo-btn imo-btn-primary imo-browse-btn" id="imo-check-btn">
+              <i class="fas fa-magnifying-glass"></i> Check My Datasets
+            </button>
+            <div class="imo-setup-divider"><span>or sort generated images</span></div>
+            <p class="imo-setup-sub">
+              Reads the prompt and LoRA settings saved in images you generated and sorts them into
+              one folder per artist, keeping their subfolders.
+            </p>
+            <button class="btn imo-btn imo-browse-btn" id="imo-browse-btn">
               <i class="fas fa-folder-open"></i> Choose Image Folder
             </button>
           </div>
@@ -118,6 +128,8 @@ class ImageOrganizerTool {
 
         </div>
 
+${this.getCheckTemplate()}
+
         <!-- Scanning overlay -->
         <div class="imo-overlay" id="imo-overlay" style="display:none">
           <div class="imo-overlay-inner">
@@ -157,6 +169,7 @@ class ImageOrganizerTool {
     outputBrowse.addEventListener('click', () => this._pickOutputFolder());
     organizeBtn.addEventListener('click', () => this._runOrganize());
     expandBtn.addEventListener('click', () => this._toggleExpandAll());
+    this._setupCheck();
   }
 
   // ─── Folder Picking ───────────────────────────────────────────────────────
@@ -500,6 +513,8 @@ class ImageOrganizerTool {
     }
   }
 }
+
+window.mixMethods(ImageOrganizerTool, ImageOrganizerDatasetCheck);
 
 // Expose on window so app.js can find it
 window.ImageOrganizerTool = ImageOrganizerTool;

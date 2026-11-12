@@ -27,6 +27,7 @@ const DialogIPC = require('./ipc/DialogIPC');
 const SystemIPC = require('./ipc/SystemIPC');
 const ImageUpscalerIPC = require('./ipc/ImageUpscalerIPC');
 const ImageOrganizerIPC = require('./ipc/ImageOrganizerIPC');
+const DatasetHealthIPC = require('./ipc/DatasetHealthIPC');
 const ComicPanelIPC = require('./ipc/ComicPanelIPC');
 const VideoFrameIPC = require('./ipc/VideoFrameIPC');
 const CleanupIPC = require('./ipc/CleanupIPC');
@@ -198,6 +199,7 @@ async function setupServices() {
   new SystemIPC();
   new ImageUpscalerIPC();
   new ImageOrganizerIPC();
+  new DatasetHealthIPC(settingsService);
   new ComicPanelIPC();
   new VideoFrameIPC();
   new CleanupIPC();

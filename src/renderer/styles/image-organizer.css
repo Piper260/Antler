@@ -18,13 +18,6 @@
   margin: var(--page-pad);
   border: 1px dashed var(--border-hover);
   border-radius: var(--radius-lg);
-  cursor: pointer;
-  transition: border-color var(--transition-fast), background-color var(--transition-fast);
-}
-
-.imo-setup:hover {
-  border-color: var(--accent-primary);
-  background: var(--accent-primary-subtle);
 }
 
 .imo-setup-inner {
@@ -359,5 +352,162 @@
 
 .imo-overlay-icon {
   font-size: 18px;
+  color: var(--text-secondary);
+}
+
+/* Start screen: the dataset check, or sorting generated images */
+.imo-setup-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 22px;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.imo-setup-divider::before,
+.imo-setup-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-primary);
+}
+
+/* Dataset check */
+.imo-check {
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.imo-check-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.imo-check-size .form-input {
+  width: 76px;
+  padding: 3px 6px;
+}
+
+.imo-check-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px var(--page-pad);
+  border-bottom: 1px solid var(--border-secondary);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.imo-check-progress .progress-bar-container {
+  flex: 1;
+  max-width: 360px;
+}
+
+.imo-check-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px var(--page-pad) 24px;
+}
+
+.imo-check-group {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.imo-check-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.imo-check-head h3 {
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.imo-check-count {
+  margin-left: 6px;
+  font-weight: 400;
+  color: var(--text-tertiary);
+}
+
+.imo-check-note {
+  margin-top: 2px;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.imo-check-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.imo-check-row:hover {
+  background: var(--bg-tertiary);
+}
+
+.imo-check-dataset {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.imo-check-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.imo-check-type {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.imo-check-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  min-width: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.imo-check-files span {
+  overflow: hidden;
+  max-width: 260px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.imo-check-more,
+.imo-check-sep {
+  color: var(--text-tertiary);
+}
+
+.imo-check-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.imo-check-n {
+  min-width: 32px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
   color: var(--text-secondary);
 }

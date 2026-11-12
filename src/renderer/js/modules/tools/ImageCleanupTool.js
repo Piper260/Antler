@@ -53,6 +53,8 @@ class ImageCleanupTool {
     this.items = [];
     this.current = -1;
     this.mode = 'bubble';
+    this.datasetMode = 'artist';
+    this.datasetEntries = [];
     this.view = 'mask'; // 'mask' or the index of a try being looked at
     this.imageUrl = null;
     this.tryUrls = [];
@@ -93,8 +95,27 @@ class ImageCleanupTool {
             <h2 class="ic-drop-title">Drop Images to Clean</h2>
             <p class="ic-drop-sub">Speech bubbles are found for you. Check the masks, then Flux Fill on your ComfyUI server paints them out. Nothing outside a mask changes.</p>
             <div class="ic-drop-actions">
-              <button class="btn btn-primary" id="ic-folder-btn"><i class="fas fa-folder-open"></i> Open Folder</button>
-              <button class="btn" id="ic-browse-btn">Browse Files</button>
+              <button class="btn btn-primary" id="ic-browse-btn">
+                <i class="fas fa-folder-open"></i> Browse Files
+              </button>
+            </div>
+
+            <div class="ic-dataset-picker">
+              <div class="ic-dataset-divider"><span>or load a dataset</span></div>
+              <div class="search-mode-container">
+                <span class="mode-label active" id="ic-label-artist">Artist</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="ic-dataset-mode-toggle">
+                  <span class="slider"></span>
+                </label>
+                <span class="mode-label" id="ic-label-character">Character</span>
+              </div>
+              <select class="form-input ic-dataset-select" id="ic-dataset-select">
+                <option value="">Select artist...</option>
+              </select>
+              <button class="btn btn-ghost btn-sm" id="ic-dataset-btn">
+                <i class="fas fa-folder-open"></i> Or choose a custom folder
+              </button>
             </div>
           </div>
         </div>
@@ -204,6 +225,7 @@ class ImageCleanupTool {
       this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
       this._setupEvents();
       this._loadStatus();
+      this._loadDatasetDropdown();
       console.log('✅ Image Cleanup Tool ready');
     } catch (error) {
       console.error('❌ Failed to initialize Image Cleanup Tool:', error);
@@ -225,10 +247,15 @@ class ImageCleanupTool {
       if (e.target.files.length) this._addFiles(e.target.files);
       fileInput.value = '';
     });
-    this.$('#ic-folder-btn').addEventListener('click', (e) => { e.stopPropagation(); this._pickFolder(); });
+    this.$('#ic-dataset-btn').addEventListener('click', (e) => { e.stopPropagation(); this._pickFolder(); });
     this.$('#ic-browse-btn').addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
     this.$('#ic-open-btn').addEventListener('click', () => this._pickFolder());
-    dropzone.addEventListener('click', () => fileInput.click());
+    this.$('#ic-dataset-select').addEventListener('change', (e) => this._onDatasetSelect(e.target.value));
+    this.$('#ic-dataset-mode-toggle').addEventListener('change', () => this._onDatasetModeToggle());
+    // The picker's controls sit inside the drop zone; only a click on the zone itself browses.
+    dropzone.addEventListener('click', (e) => {
+      if (!e.target.closest('.ic-dataset-picker')) fileInput.click();
+    });
     dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
     dropzone.addEventListener('dragleave', (e) => { if (!dropzone.contains(e.relatedTarget)) dropzone.classList.remove('drag-over'); });
     [dropzone, workspace].forEach(target => target.addEventListener('drop', (e) => {
@@ -368,10 +395,55 @@ class ImageCleanupTool {
 
   // ---------------------------------------------------------------- loading
 
+  // ---------------------------------------------------------------- dataset picker
+  // The same "or load a dataset" picker as Comic Panels, Image Resizer and Image Upscaler.
+
+  async _loadDatasetDropdown() {
+    try {
+      const result = await window.electronAPI.tagEditor.getAvailableArtists();
+      if (result.success) {
+        this.datasetEntries = result.artists || [];
+        this._populateDatasetSelect();
+      }
+    } catch (error) {
+      console.error('❌ Failed to load dataset list:', error);
+    }
+  }
+
+  _populateDatasetSelect() {
+    const select = this.container.querySelector('#ic-dataset-select');
+    if (!select) return;
+    const options = (this.datasetEntries || [])
+      .filter(entry => entry.type === this.datasetMode)
+      .sort((a, b) => (a.displayName || a.name || '').toLowerCase().localeCompare((b.displayName || b.name || '').toLowerCase()))
+      .map(entry => `<option value="${escapeHtml(entry.id)}">${escapeHtml(entry.displayName || entry.name)} (${entry.fileCount || 0} files)</option>`)
+      .join('');
+    select.innerHTML = `<option value="">Select ${this.datasetMode}...</option>${options}`;
+  }
+
+  _onDatasetModeToggle() {
+    const isCharacterMode = this.container.querySelector('#ic-dataset-mode-toggle').checked;
+    this.datasetMode = isCharacterMode ? 'character' : 'artist';
+    this.container.querySelector('#ic-label-artist').classList.toggle('active', !isCharacterMode);
+    this.container.querySelector('#ic-label-character').classList.toggle('active', isCharacterMode);
+    this._populateDatasetSelect();
+  }
+
+  async _onDatasetSelect(entryId) {
+    if (!entryId) return;
+    const entry = (this.datasetEntries || []).find(item => item.id === entryId);
+    if (entry?.path) await this._addFolder(entry.path);
+    this.container.querySelector('#ic-dataset-select').value = '';
+  }
+
+
   async _pickFolder() {
     const result = await window.electronAPI.dialog.openDirectory();
-    if (!result?.success || !result.path) return;
-    const scan = await window.electronAPI.utils.scanImageFolder(result.path);
+    if (result?.success && result.path) await this._addFolder(result.path);
+  }
+
+  async _addFolder(folderPath) {
+    const scan = await window.electronAPI.utils.scanImageFolder(folderPath);
     if (!scan.success) {
       this.showToast(scan.message || 'Failed to scan folder', 'error');
       return;

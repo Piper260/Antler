@@ -1,5 +1,7 @@
 import { openFrameSource } from './video-frames/frameSources.js';
 
+const escapeHtml = (text) => String(text).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
 console.log('🔧 VideoFrameTool module loading...');
 
 const MAX_SAMPLES = 5000;
@@ -36,6 +38,9 @@ class VideoFrameTool {
     this.kept = [];
     // Times of frames unticked by hand, so a new difference setting keeps them off.
     this.unticked = new Set();
+    // Dataset picker (shared with Comic Panels and the image tools).
+    this.datasetMode = 'artist';
+    this.datasetEntries = [];
     this.run = null;
     this.status = '';
 
@@ -74,6 +79,25 @@ class VideoFrameTool {
             <div class="vf-drop-actions">
               <button class="btn btn-primary" id="vf-browse-btn">
                 <i class="fas fa-folder-open"></i> Browse Files
+              </button>
+            </div>
+
+            <div class="vf-dataset-picker">
+              <div class="vf-dataset-divider"><span>or load a dataset</span></div>
+              <div class="search-mode-container">
+                <span class="mode-label active" id="vf-label-artist">Artist</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="vf-dataset-mode-toggle">
+                  <span class="slider"></span>
+                </label>
+                <span class="mode-label" id="vf-label-character">Character</span>
+              </div>
+              <select class="form-input vf-dataset-select" id="vf-dataset-select">
+                <option value="">Select artist...</option>
+              </select>
+              <select class="form-input vf-dataset-select" id="vf-video-select" style="display:none" aria-label="Video"></select>
+              <button class="btn btn-ghost btn-sm" id="vf-dataset-btn">
+                <i class="fas fa-folder-open"></i> Or choose a custom folder
               </button>
             </div>
           </div>
@@ -153,6 +177,7 @@ class VideoFrameTool {
       container.innerHTML = this.getTemplate();
       this.container = container;
       this._setupEvents();
+      this._loadDatasetDropdown();
       console.log('✅ Video Frames Tool ready');
     } catch (error) {
       console.error('❌ Failed to initialize Video Frames Tool:', error);
@@ -176,8 +201,18 @@ class VideoFrameTool {
       if (event.target.files.length) this._open(event.target.files[0]);
       fileInput.value = '';
     });
-    dropzone.addEventListener('click', () => fileInput.click());
+    // The picker's controls sit inside the drop zone; only a click on the zone itself browses.
+    dropzone.addEventListener('click', (event) => {
+      if (!event.target.closest('.vf-dataset-picker')) fileInput.click();
+    });
     this.container.querySelector('#vf-open-btn').addEventListener('click', () => fileInput.click());
+    this.container.querySelector('#vf-dataset-select').addEventListener('change', (event) => this._onDatasetSelect(event.target.value));
+    this.container.querySelector('#vf-dataset-mode-toggle').addEventListener('change', () => this._onDatasetModeToggle());
+    this.container.querySelector('#vf-video-select').addEventListener('change', (event) => this._openPath(event.target.value));
+    this.container.querySelector('#vf-dataset-btn').addEventListener('click', async () => {
+      const result = await window.electronAPI.dialog.openDirectory();
+      if (result?.success && result.path) await this._listVideos(result.path);
+    });
 
     dropzone.addEventListener('dragover', (event) => {
       event.preventDefault();
@@ -232,6 +267,47 @@ class VideoFrameTool {
     });
   }
 
+  // ---------------------------------------------------------------- dataset picker
+  // The same "or load a dataset" picker as Comic Panels, Image Resizer and Image Upscaler.
+
+  async _loadDatasetDropdown() {
+    try {
+      const result = await window.electronAPI.tagEditor.getAvailableArtists();
+      if (result.success) {
+        this.datasetEntries = result.artists || [];
+        this._populateDatasetSelect();
+      }
+    } catch (error) {
+      console.error('❌ Failed to load dataset list:', error);
+    }
+  }
+
+  _populateDatasetSelect() {
+    const select = this.container.querySelector('#vf-dataset-select');
+    if (!select) return;
+    const options = (this.datasetEntries || [])
+      .filter(entry => entry.type === this.datasetMode)
+      .sort((a, b) => (a.displayName || a.name || '').toLowerCase().localeCompare((b.displayName || b.name || '').toLowerCase()))
+      .map(entry => `<option value="${escapeHtml(entry.id)}">${escapeHtml(entry.displayName || entry.name)} (${entry.fileCount || 0} files)</option>`)
+      .join('');
+    select.innerHTML = `<option value="">Select ${this.datasetMode}...</option>${options}`;
+  }
+
+  _onDatasetModeToggle() {
+    const isCharacterMode = this.container.querySelector('#vf-dataset-mode-toggle').checked;
+    this.datasetMode = isCharacterMode ? 'character' : 'artist';
+    this.container.querySelector('#vf-label-artist').classList.toggle('active', !isCharacterMode);
+    this.container.querySelector('#vf-label-character').classList.toggle('active', isCharacterMode);
+    this._populateDatasetSelect();
+  }
+
+  async _onDatasetSelect(entryId) {
+    if (!entryId) return;
+    const entry = (this.datasetEntries || []).find(item => item.id === entryId);
+    if (entry?.path) await this._listVideos(entry.path);
+    this.container.querySelector('#vf-dataset-select').value = '';
+  }
+
   _loadSettings() {
     try {
       return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY)) };
@@ -266,7 +342,41 @@ class VideoFrameTool {
     this.run = null;
   }
 
-  async _open(file) {
+  /** The videos and animations in a folder, to pick one from. */
+  async _listVideos(folderPath) {
+    const select = this.container.querySelector('#vf-video-select');
+    const scan = await window.electronAPI.utils.scanVideoFolder(folderPath);
+    if (!scan.success) {
+      this.showToast(scan.message || 'Failed to scan folder', 'error');
+      return;
+    }
+    const videos = (scan.videos || []).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    if (!videos.length) {
+      select.style.display = 'none';
+      this.showToast('No videos or animations in that folder', 'info');
+      return;
+    }
+    const folderName = folderPath.split(/[\\/]/).filter(Boolean).pop();
+    select.innerHTML = `<option value="">Select a video from ${escapeHtml(folderName)} (${videos.length})...</option>`
+      + videos.map(v => `<option value="${escapeHtml(v.filePath)}">${escapeHtml(v.subFolder ? `${v.subFolder}/${v.name}` : v.name)}</option>`).join('');
+    select.style.display = '';
+    select.focus();
+  }
+
+  /** Opens a video picked from a dataset, which has a path but no browser File yet. */
+  async _openPath(filePath) {
+    if (!filePath) return;
+    const read = await window.electronAPI.utils.readVideoFile(filePath);
+    this.container.querySelector('#vf-video-select').value = '';
+    if (!read.success) {
+      this.showToast(read.message || 'Could not open that file', 'error');
+      return;
+    }
+    const name = filePath.split(/[\\/]/).pop();
+    await this._open(new File([new Uint8Array(read.data)], name, { type: read.mime }), filePath);
+  }
+
+  async _open(file, knownPath = null) {
     await this._stopRun();
     let source;
     try {
@@ -284,7 +394,7 @@ class VideoFrameTool {
     this.stem = file.name.replace(/\.[^.]+$/, '');
 
     // Beside the original when its location is known; a dropped file normally has one.
-    const filePath = window.electronAPI.utils.pathForFile(file);
+    const filePath = knownPath || window.electronAPI.utils.pathForFile(file);
     this.folder = filePath ? filePath.replace(/[^\\/]+$/, `${this.stem}_frames`) : '';
     this.container.querySelector('#vf-folder-input').value = this.folder;
     this.container.querySelector('#vf-source-label').textContent = `${file.name}, ${source.summary}`;

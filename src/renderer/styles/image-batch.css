@@ -1,8 +1,8 @@
 /* Shared layout for the Image Resizer (ir-) and Image Upscaler (iu-).
    Both tools have the same structure: a drop zone with a dataset picker,
    then a toolbar above a list of image rows. Comic Panels (cp-) shares the
-   drop zone only; Video Frames (vf-) shares the drop zone and toolbar;
-   Image Cleanup (ic-) shares the drop zone. */
+   drop zone and dataset picker; Video Frames (vf-) shares those and the
+   toolbar; Image Cleanup (ic-) shares the drop zone and dataset picker. */
 
 .ir-tool,
 .iu-tool,
@@ -97,7 +97,9 @@
 
 .ir-dataset-picker,
 .iu-dataset-picker,
-.cp-dataset-picker {
+.cp-dataset-picker,
+.vf-dataset-picker,
+.ic-dataset-picker {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -109,7 +111,9 @@
 
 .ir-dataset-divider,
 .iu-dataset-divider,
-.cp-dataset-divider {
+.cp-dataset-divider,
+.vf-dataset-divider,
+.ic-dataset-divider {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -123,7 +127,11 @@
 .iu-dataset-divider::before,
 .cp-dataset-divider::before,
 .iu-dataset-divider::after,
-.cp-dataset-divider::after {
+.cp-dataset-divider::after,
+.vf-dataset-divider::before,
+.vf-dataset-divider::after,
+.ic-dataset-divider::before,
+.ic-dataset-divider::after {
   content: '';
   flex: 1;
   height: 1px;
@@ -132,7 +140,9 @@
 
 .ir-dataset-select,
 .iu-dataset-select,
-.cp-dataset-select {
+.cp-dataset-select,
+.vf-dataset-select,
+.ic-dataset-select {
   width: 100%;
 }
 

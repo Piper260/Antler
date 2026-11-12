@@ -14,6 +14,13 @@ const DATASET_IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gi
 // without this a scan would surface each upscaled image's original as a
 // second, duplicate-postId entry.
 const IGNORED_DIR_NAMES = new Set(['bak', '.git', 'node_modules']);
+// Videos and animations Video Frames can read, with their types.
+const FRAME_SOURCE_MIME_TYPES = {
+  '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime', '.mkv': 'video/x-matroska',
+  '.gif': 'image/gif', '.apng': 'image/apng'
+};
+const FRAME_SOURCE_EXTENSIONS = new Set(Object.keys(FRAME_SOURCE_MIME_TYPES));
+const MAX_FRAME_SOURCE_BYTES = 2 * 1024 * 1024 * 1024;
 const DATASET_IMAGE_MIME_TYPES = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
@@ -84,7 +91,7 @@ class UtilsIPC {
    * shallow readdir() would miss images that are genuinely on disk. Returns
    * [{filePath, name, subFolder}], subFolder being '' at rootPath itself.
    */
-  async _findImagesRecursive(rootPath) {
+  async _findImagesRecursive(rootPath, extensions = DATASET_IMAGE_EXTENSIONS) {
     const images = [];
     const walk = async (dir) => {
       let entries;
@@ -96,7 +103,7 @@ class UtilsIPC {
         if (entry.isDirectory()) {
           if (IGNORED_DIR_NAMES.has(entry.name.toLowerCase()) || entry.name.startsWith('.')) continue;
           await walk(path.join(dir, entry.name));
-        } else if (entry.isFile() && DATASET_IMAGE_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) {
+        } else if (entry.isFile() && extensions.has(path.extname(entry.name).toLowerCase())) {
           const fullPath = path.join(dir, entry.name);
           images.push({
             filePath: fullPath,
@@ -506,6 +513,32 @@ class UtilsIPC {
       } catch (error) {
         console.error('❌ Error scanning image dataset folder:', error);
         return { success: false, message: `Failed to scan folder: ${error.message}` };
+      }
+    });
+
+    // Videos and animations in a dataset folder, for Video Frames' dataset picker.
+    ipcMain.handle('utils:scan-video-folder', async (event, folderPath) => {
+      try {
+        const folder = requireLocalPath(folderPath, 'folder');
+        const videos = await this._findImagesRecursive(folder, FRAME_SOURCE_EXTENSIONS);
+        return { success: true, videos };
+      } catch (error) {
+        console.error('❌ Error scanning for videos:', error);
+        return { success: false, message: `Failed to scan folder: ${error.message}` };
+      }
+    });
+
+    // A video or animation's bytes, for Video Frames to open one picked from a dataset.
+    ipcMain.handle('utils:read-video-file', async (event, filePath) => {
+      try {
+        const file = requireFile(filePath, FRAME_SOURCE_EXTENSIONS, 'video');
+        const { size } = await fs.stat(file);
+        if (size > MAX_FRAME_SOURCE_BYTES) return { success: false, message: 'That video is too large to open' };
+        const data = await fs.readFile(file);
+        return { success: true, data, mime: FRAME_SOURCE_MIME_TYPES[path.extname(file).toLowerCase()] };
+      } catch (error) {
+        console.error('❌ Error reading video file:', error);
+        return { success: false, message: `Failed to read file: ${error.message}` };
       }
     });
 

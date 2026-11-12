@@ -194,6 +194,8 @@ const electronAPI = {
       showInFolder: (filePath) => safeInvoke('utils:show-in-folder', filePath),
       resizeSaveImage: (filePath, buffer) => safeInvoke('utils:resize-save-image', { filePath, buffer }),
       scanImageFolder: (folderPath) => safeInvoke('utils:scan-image-folder', folderPath),
+      scanVideoFolder: (folderPath) => safeInvoke('utils:scan-video-folder', folderPath),
+      readVideoFile: (filePath) => safeInvoke('utils:read-video-file', filePath),
       readImageFile: (filePath) => safeInvoke('utils:read-image-file', filePath),
 
     /**

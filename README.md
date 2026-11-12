@@ -1,6 +1,6 @@
 # Antler
 
-**A desktop workbench for building LoRA training datasets from e621.**
+**A desktop workbench for building LoRA training datasets from multiple sources.**
 
 Antler takes a dataset from search to training-ready in one place. Find an artist or character, download their posts with matching caption files, then tag, split, clean, upscale and review the set before you train on it.
 

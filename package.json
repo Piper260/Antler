@@ -1,6 +1,6 @@
 {
   "name": "antler",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Desktop workbench for building LoRA training datasets from e621",
   "main": "src/main/main.js",
   "scripts": {

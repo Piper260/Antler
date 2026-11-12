@@ -86,7 +86,7 @@ class AppPageTemplates {
               <input type="password" class="form-input" id="inkbunny-password" placeholder="Your Inkbunny password" autocomplete="off">
               <button type="button" class="btn btn-sm btn-secondary secret-clear-btn" data-secret="inkbunny.password" style="display: none;" title="Remove the saved password. Leaving the field blank keeps it.">Clear</button>
             </div>
-            <small class="form-help">Turn on "Enable API access" in your Inkbunny account settings first. The password is stored encrypted on this computer.</small>
+            <small class="form-help">Turn on "Enable API access" in your Inkbunny account settings first. The password is stored encrypted on this computer, and saved as soon as you leave the field.</small>
           </div>
 
           <div class="form-actions">

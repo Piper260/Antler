@@ -43,6 +43,43 @@ class AppSettingsPage {
   /**
    * Load current settings into the form
    */
+  /**
+   * Credentials save as soon as a field is left (which includes clicking its
+   * Test button), instead of waiting for Save All at the bottom of the page:
+   * credentials typed and tested used to be lost on leaving Settings. A blank
+   * key field keeps the saved key (main/services/SettingsService.js); the
+   * Clear button removes one.
+   */
+  bindCredentialAutosave() {
+    const fields = {
+      'e621-username': 'e621.username',
+      'e621-api-key': 'e621.apiKey',
+      'inkbunny-username': 'inkbunny.username',
+      'inkbunny-password': 'inkbunny.password',
+      'hf-api-token': 'huggingface.apiToken'
+    };
+    const secrets = new Set(['e621.apiKey', 'inkbunny.password', 'huggingface.apiToken']);
+    for (const [id, settingPath] of Object.entries(fields)) {
+      const input = document.getElementById(id);
+      if (!input) continue;
+      input.addEventListener('change', async () => {
+        const value = settingPath.endsWith('password') ? input.value : input.value.trim();
+        // A blank key field means "keep the saved key": nothing to save.
+        if (secrets.has(settingPath) && !value) return;
+        const result = await window.electronAPI.settings.set(settingPath, value);
+        if (result?.success === false) {
+          this.showToast(`Could not save: ${result.message || 'unknown error'}`, 'error');
+          return;
+        }
+        this.showToast(secrets.has(settingPath) ? 'Saved (stored encrypted on this computer)' : 'Saved', 'success');
+        if (secrets.has(settingPath)) {
+          const saved = await window.electronAPI.settings.getAll().catch(() => null);
+          if (saved?.success) this.showSecretClearButtons(saved.settings);
+        }
+      });
+    }
+  }
+
   /** Shows each key field's Clear button only while a key is saved. */
   showSecretClearButtons(settings) {
     document.querySelectorAll('.secret-clear-btn').forEach((btn) => {
@@ -190,6 +227,7 @@ class AppSettingsPage {
     document.querySelectorAll('.secret-clear-btn').forEach((btn) => {
       btn.addEventListener('click', () => this.clearSecret(btn));
     });
+    this.bindCredentialAutosave();
 
     document.getElementById('x-sign-in-btn')?.addEventListener('click', () => this.xSignIn());
     document.getElementById('x-sign-out-btn')?.addEventListener('click', () => this.xSignOut());

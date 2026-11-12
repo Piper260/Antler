@@ -43,6 +43,31 @@ class AppSettingsPage {
   /**
    * Load current settings into the form
    */
+  /** Shows each key field's Clear button only while a key is saved. */
+  showSecretClearButtons(settings) {
+    document.querySelectorAll('.secret-clear-btn').forEach((btn) => {
+      const saved = btn.dataset.secret.split('.').reduce((o, k) => o?.[k], settings);
+      btn.style.display = saved ? '' : 'none';
+    });
+  }
+
+  /**
+   * Removes a saved key. Blank fields keep the saved key when settings are
+   * saved, so this is the only way to remove one.
+   */
+  async clearSecret(btn) {
+    const input = btn.parentElement.querySelector('input');
+    if (!confirm('Remove this saved key from Antler? You will need to enter it again to use it.')) return;
+    const result = await window.electronAPI.settings.clearSecret(btn.dataset.secret);
+    if (result?.success === false) {
+      this.showToast(result.message || 'Could not clear the key', 'error');
+      return;
+    }
+    if (input) input.value = '';
+    btn.style.display = 'none';
+    this.showToast('Saved key removed', 'success');
+  }
+
   async loadCurrentSettings() {
   try {
     // Load E621 credentials
@@ -135,6 +160,8 @@ class AppSettingsPage {
         model: settings.huggingface?.preferredModel,
         temperature: settings.huggingface?.temperature
       });
+
+      this.showSecretClearButtons(settings);
     }
 
   } catch (error) {
@@ -159,7 +186,15 @@ class AppSettingsPage {
     if (testInkbunnyBtn) {
       testInkbunnyBtn.addEventListener('click', () => this.testInkbunnyLogin());
     }
-    
+
+    document.querySelectorAll('.secret-clear-btn').forEach((btn) => {
+      btn.addEventListener('click', () => this.clearSecret(btn));
+    });
+
+    document.getElementById('x-sign-in-btn')?.addEventListener('click', () => this.xSignIn());
+    document.getElementById('x-sign-out-btn')?.addEventListener('click', () => this.xSignOut());
+    this.showXStatus();
+
     if (testAIBtn) {
       testAIBtn.addEventListener('click', () => this.testAIConnection());
     }
@@ -317,6 +352,37 @@ class AppSettingsPage {
     }
   }
 
+  /** Shows whether X is signed in, and the matching button. */
+  async showXStatus(state) {
+    const status = document.getElementById('x-status');
+    const signIn = document.getElementById('x-sign-in-btn');
+    const signOut = document.getElementById('x-sign-out-btn');
+    if (!status) return;
+    const { signedIn } = state || await window.electronAPI.x.status().catch(() => ({ signedIn: false }));
+    status.style.display = 'block';
+    status.className = `credentials-status text-${signedIn ? 'success' : 'muted'}`;
+    status.textContent = signedIn ? 'Signed in to X' : 'Not signed in';
+    if (signIn) signIn.textContent = signedIn ? 'Sign in again' : 'Sign in to X';
+    if (signOut) signOut.style.display = signedIn ? '' : 'none';
+  }
+
+  async xSignIn() {
+    const button = document.getElementById('x-sign-in-btn');
+    if (button) button.disabled = true;
+    try {
+      const result = await window.electronAPI.x.signIn();
+      await this.showXStatus(result);
+      if (result?.signedIn) this.showToast('Signed in to X', 'success');
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  async xSignOut() {
+    await this.showXStatus(await window.electronAPI.x.signOut());
+    this.showToast('Signed out of X', 'info');
+  }
+
   /**
    * Save all settings at once (unified save)
    */
@@ -396,6 +462,8 @@ class AppSettingsPage {
           }, 5000);
         }
         this.showToast('All settings saved!', 'success');
+        const saved = await window.electronAPI.settings.getAll().catch(() => null);
+        if (saved?.success) this.showSecretClearButtons(saved.settings);
       } else {
         throw new Error(result.message || 'Save failed');
       }

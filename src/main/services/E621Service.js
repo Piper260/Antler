@@ -461,6 +461,21 @@ async getArtistSuggestions(query, limit = 10) {
 }
 
 /**
+ * The links on an e621 artist's page (their other accounts), as
+ * [{ url, active }]. Empty when e621 has no artist entry by that name.
+ */
+async getArtistUrls(artistName) {
+  const name = String(artistName || '').trim().toLowerCase().replace(/\s+/g, '_');
+  if (!name) return [];
+  const artists = await this.makeRequest(`/artists.json?search[name]=${encodeURIComponent(name)}&limit=5`);
+  const list = Array.isArray(artists) ? artists : [];
+  const artist = list.find(a => a.name === name) || list[0];
+  if (!artist) return [];
+  const urls = await this.makeRequest(`/artist_urls.json?search[artist_id]=${artist.id}&limit=100`);
+  return (Array.isArray(urls) ? urls : []).map(u => ({ url: u.url, active: u.is_active !== false }));
+}
+
+/**
  * Validate artist exists by checking if they have posts
  */
 async validateArtist(artistName) {

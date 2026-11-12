@@ -102,6 +102,11 @@ async fetchArtistSuggestions(query) {
     
     let result;
     try {
+      if (this.source === 'x') {
+        // X has no name lookup Antler can call; type the @handle.
+        this.hideSuggestions();
+        return;
+      }
       if (this.source === 'inkbunny' || this.source === 'pawchive') {
         // Both can suggest artist names, but have no character tags to suggest.
         if (this.searchMode !== 'artist') {

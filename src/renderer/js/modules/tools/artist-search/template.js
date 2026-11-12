@@ -47,11 +47,12 @@ export default class ArtistSearchTemplate {
                   </label>
                   <span class="mode-label" id="label-character">Character</span>
                 </div>
-                <select class="posts-filter-control" id="source-select" title="Site to search. e926 is e621's safe-only mirror; Inkbunny without a login in Settings only shows General-rated work; Pawchive has no scores or ratings, and character search there is a text search.">
+                <select class="posts-filter-control" id="source-select" title="Site to search. e926 is e621's safe-only mirror; Inkbunny without a login in Settings only shows General-rated work; Pawchive has no scores or ratings, and character search there is a text search. X needs you signed in (Settings) and loads posts by scrolling the artist's profile, so it is slower.">
                   <option value="e621">e621</option>
                   <option value="e926">e926 (safe)</option>
                   <option value="inkbunny">Inkbunny</option>
                   <option value="pawchive">Pawchive</option>
+                  <option value="x">X (Twitter)</option>
                 </select>
               </div>
             </div>
@@ -122,7 +123,8 @@ export default class ArtistSearchTemplate {
                   <input type="number" class="posts-filter-control posts-filter-top" id="top-n-input" value="50" min="1" title="How many of the highest training scores to select">
                   <button class="btn btn-sm btn-secondary" id="select-top-btn" title="Select the posts with the highest training scores">Select top</button>
                   <div class="toolbar-divider" id="upgrade-divider"></div>
-                  <button class="btn btn-sm btn-secondary" id="find-upgrades-btn" title="Look for larger copies of these posts on Pawchive. Run it again after loading more posts.">Find upgrades</button>
+                  <button class="btn btn-sm btn-boost" id="find-upgrades-btn" title="Look for larger copies of these posts on Pawchive. Run it again after loading more posts."><i class="fas fa-angles-right"></i><span>Find upgrades</span></button>
+                  <button class="btn btn-sm btn-secondary" id="find-on-x-btn" title="Find this artist's X account from their e621 page and search it"><i class="fab fa-x-twitter"></i> Find on X</button>
                   <div class="toolbar-divider" id="category-toolbar-divider" style="display: none;"></div>
                   <select class="posts-filter-control" id="bulk-category-select" style="display: none;" title="Category folder to apply to selected posts">
                     <option value="">Category: (root)</option>
@@ -150,6 +152,12 @@ export default class ArtistSearchTemplate {
                   <button class="btn btn-sm btn-secondary" id="change-creator-btn" title="Link this artist to a different Pawchive creator">Change creator</button>
                   <button class="btn btn-sm btn-secondary" id="select-upgrades-btn" title="Select every post that will download from Pawchive">Select upgrades</button>
                   <button class="btn btn-sm btn-primary" id="review-upgrades-btn" title="Compare the uncertain pairs one by one">Review</button>
+                </div>
+
+                <div class="posts-upgrade-bar x-index-bar" id="x-index-bar" style="display: none;">
+                  <span class="posts-upgrade-text" id="x-index-text"></span>
+                  <button class="btn btn-sm btn-secondary" id="x-index-stop-btn" title="Stop indexing. What was found is kept, and searching again continues from there.">Stop</button>
+                  <div class="progress-bar-container x-index-track" id="x-index-track"><div class="progress-bar" id="x-index-fill"></div></div>
                 </div>
               </div>
               

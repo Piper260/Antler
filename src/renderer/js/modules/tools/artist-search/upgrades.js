@@ -27,6 +27,7 @@ upgradeAvailable() {
 updateUpgradeButton() {
   const show = this.upgradeAvailable();
   if (this.elements.find_upgrades_btn) this.elements.find_upgrades_btn.style.display = show ? '' : 'none';
+  if (this.elements.find_on_x_btn) this.elements.find_on_x_btn.style.display = show ? '' : 'none';
   if (this.elements.upgrade_divider) this.elements.upgrade_divider.style.display = show ? '' : 'none';
   if (!show && this.elements.upgrade_bar) this.elements.upgrade_bar.style.display = 'none';
   else this.renderUpgradeBar();
@@ -113,7 +114,9 @@ setUpgradeButtonBusy(busy) {
   const btn = this.elements.find_upgrades_btn;
   if (!btn) return;
   btn.disabled = busy;
-  btn.textContent = busy ? 'Finding upgrades...' : 'Find upgrades';
+  btn.classList.toggle('is-boosting', busy);
+  const label = btn.querySelector('span') || btn;
+  label.textContent = busy ? 'Finding upgrades...' : 'Find upgrades';
 }
 
 upgradeCounts() {

@@ -203,19 +203,41 @@ class SettingsService {
     return clone;
   }
 
-  /** A copy of settings from the renderer, with masks put back to the saved secrets. */
+  /**
+   * Whether a secret from the renderer means "keep the saved one": the mask,
+   * or a blank field. A form saved before it finished loading (or from a
+   * version without that field) sends blanks, and that must not wipe a key.
+   * Clearing a key on purpose goes through clearSecret().
+   */
+  _keepsSavedSecret(value) {
+    return value === SECRET_MASK || value == null || (typeof value === 'string' && !value.trim());
+  }
+
+  /** A copy of settings from the renderer, with masks and blanks put back to the saved secrets. */
   unmaskSecrets(settings) {
     if (!settings || typeof settings !== 'object') return settings;
     const clone = JSON.parse(JSON.stringify(settings));
     for (const secretPath of SECRET_PATHS) {
-      if (this._getPath(clone, secretPath) === SECRET_MASK) this._setPath(clone, secretPath, this._getPath(this.settings, secretPath));
+      const [section] = secretPath.split('.');
+      if (!clone[section] || typeof clone[section] !== 'object') continue;
+      if (this._keepsSavedSecret(this._getPath(clone, secretPath))) {
+        this._setPath(clone, secretPath, this._getPath(this.settings, secretPath) || '');
+      }
     }
     return clone;
   }
 
-  /** A secret value from the renderer: the mask stands for the saved one. */
+  /** A secret value from the renderer: the mask or a blank stands for the saved one. */
   unmaskSecret(secretPath, value) {
-    return value === SECRET_MASK ? this._getPath(this.settings, secretPath) : value;
+    if (!SECRET_PATHS.includes(secretPath)) return value;
+    return this._keepsSavedSecret(value) ? (this._getPath(this.settings, secretPath) || '') : value;
+  }
+
+  /** Removes a saved secret. The only way to clear one, since a blank field keeps it. */
+  async clearSecret(secretPath) {
+    if (!SECRET_PATHS.includes(secretPath)) return { success: false, message: `Not a secret setting: ${secretPath}` };
+    this._setPath(this.settings, secretPath, '');
+    return this.saveSettings();
   }
 
   /**

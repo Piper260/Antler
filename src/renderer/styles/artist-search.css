@@ -397,6 +397,16 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* X indexing: the bar spans the row under its text */
+.x-index-track {
+  flex-basis: 100%;
+}
+
+.x-index-track:not(.is-determinate) .progress-bar {
+  width: 25%;
+  animation: progress-slide 1.2s linear infinite;
+}
+
 /* Upgrade modal: creator picker and side-by-side review */
 .image-preview-modal.upgrade-modal .modal-content {
   width: min(1200px, 100%);

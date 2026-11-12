@@ -51,7 +51,10 @@ class AppPageTemplates {
           
           <div class="form-group">
             <label class="form-label">API Key</label>
-            <input type="password" class="form-input" id="e621-api-key" placeholder="Your E621 API key">
+            <div class="input-with-button secret-field">
+              <input type="password" class="form-input" id="e621-api-key" placeholder="Your E621 API key">
+              <button type="button" class="btn btn-sm btn-secondary secret-clear-btn" data-secret="e621.apiKey" style="display: none;" title="Remove the saved API key. Leaving the field blank keeps it.">Clear</button>
+            </div>
             <small class="form-help">Get this from Account Settings → API Access on e621.net</small>
           </div>
           
@@ -79,7 +82,10 @@ class AppPageTemplates {
 
           <div class="form-group">
             <label class="form-label">Password</label>
-            <input type="password" class="form-input" id="inkbunny-password" placeholder="Your Inkbunny password" autocomplete="off">
+            <div class="input-with-button secret-field">
+              <input type="password" class="form-input" id="inkbunny-password" placeholder="Your Inkbunny password" autocomplete="off">
+              <button type="button" class="btn btn-sm btn-secondary secret-clear-btn" data-secret="inkbunny.password" style="display: none;" title="Remove the saved password. Leaving the field blank keeps it.">Clear</button>
+            </div>
             <small class="form-help">Turn on "Enable API access" in your Inkbunny account settings first. The password is stored encrypted on this computer.</small>
           </div>
 
@@ -91,6 +97,20 @@ class AppPageTemplates {
           </div>
 
           <div class="credentials-status" id="inkbunny-status" style="display: none;"></div>
+        </div>
+
+        <!-- X (Twitter) Sign-in -->
+        <div class="settings-section">
+          <h3><i class="fab fa-x-twitter"></i> X (Twitter)</h3>
+          <p class="text-muted mb-3">Needed to search X in Artist Search. You sign in on x.com's own page in an Antler window; Antler keeps that sign-in on this computer and never sees your password. Searching opens the artist's profile in a hidden window and scrolls their posts, keeping the ones with images or video, so it is slower than the other sites.</p>
+          <p class="text-warning mb-3">Reading X this way is against X's terms of service. X may limit or suspend the account you sign in with, so consider a separate account.</p>
+
+          <div class="form-actions">
+            <button class="btn btn-primary" id="x-sign-in-btn">Sign in to X</button>
+            <button class="btn btn-secondary" id="x-sign-out-btn" style="display: none;">Sign out</button>
+          </div>
+
+          <div class="credentials-status" id="x-status" style="display: none;"></div>
         </div>
 
         <!-- Hugging Face AI Configuration -->
@@ -111,7 +131,10 @@ class AppPageTemplates {
 
           <div class="form-group" id="ai-token-group" style="display: none;">
             <label class="form-label">Hugging Face API Token</label>
-            <input type="password" class="form-input" id="hf-api-token" placeholder="hf_xxxxxxxxxxxxxxxxxxxxx">
+            <div class="input-with-button secret-field">
+              <input type="password" class="form-input" id="hf-api-token" placeholder="hf_xxxxxxxxxxxxxxxxxxxxx">
+              <button type="button" class="btn btn-sm btn-secondary secret-clear-btn" data-secret="huggingface.apiToken" style="display: none;" title="Remove the saved token. Leaving the field blank keeps it.">Clear</button>
+            </div>
             <small class="form-help">
               Get a free token from <a href="https://huggingface.co/settings/tokens/new?ownUserPermissions=inference.serverless.write&tokenType=fineGrained" target="_blank" class="settings-link">huggingface.co/settings/tokens</a>.
               Choose the "Fine-grained" token type and enable the permission "Make calls to Inference Providers".

@@ -17,6 +17,8 @@ const InkbunnyIPC = require('./ipc/InkbunnyIPC');
 const PawchiveService = require('./services/PawchiveService');
 const UpgradeFinder = require('./services/UpgradeFinder');
 const PawchiveIPC = require('./ipc/PawchiveIPC');
+const XService = require('./services/XService');
+const XIPC = require('./ipc/XIPC');
 const UtilsIPC = require('./ipc/UtilsIPC');
 const TagEditorIPC = require('./ipc/TagEditorIPC');
 const { UpdateService } = require('./services/UpdateService');
@@ -191,6 +193,7 @@ async function setupServices() {
   new InkbunnyIPC(new InkbunnyService(settingsService), settingsService);
   const pawchiveService = new PawchiveService();
   new PawchiveIPC(pawchiveService, new UpgradeFinder(pawchiveService, path.join(app.getPath('userData'), 'pawchive-upgrades.json')));
+  new XIPC(new XService(app.getPath('userData')), e621Service);
   utilsIPC = new UtilsIPC(settingsService);
   tagEditorIPC = new TagEditorIPC(settingsService);
   updateIPC = new UpdateIPC(updateService);

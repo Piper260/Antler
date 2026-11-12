@@ -74,6 +74,7 @@ const electronAPI = {
     get: (path) => safeInvoke('settings:get', path),
     set: (path, value) => safeInvoke('settings:set', path, value),
     save: (settings) => safeInvoke('settings:save', settings),
+    clearSecret: (secretPath) => safeInvoke('settings:clear-secret', secretPath),
     reset: () => safeInvoke('settings:reset'),
     export: () => safeInvoke('settings:export'),
     import: (data) => safeInvoke('settings:import', data),
@@ -120,6 +121,18 @@ const electronAPI = {
     findUpgrades: (args) => safeInvoke('pawchive:find-upgrades', args),
     recordDecision: (postId, hash, answer, distance) => safeInvoke('pawchive:record-decision', postId, hash, answer, distance),
     onUpgradeProgress: (callback) => safeOn('pawchive:upgrade-progress', callback)
+  },
+
+  x: {
+    searchByArtist: (artistName, options) => safeInvoke('x:search-by-artist', artistName, options),
+    searchByCharacter: (characterName, options) => safeInvoke('x:search-by-character', characterName, options),
+    status: () => safeInvoke('x:status'),
+    signIn: () => safeInvoke('x:sign-in'),
+    signOut: () => safeInvoke('x:sign-out'),
+    findAccounts: (artist) => safeInvoke('x:find-accounts', artist),
+    setLink: (artist, handle) => safeInvoke('x:set-link', artist, handle),
+    stopIndex: () => safeInvoke('x:stop-index'),
+    onIndexProgress: (callback) => safeOn('x:index-progress', callback)
   },
 
   // Update API
@@ -284,6 +297,13 @@ const electronAPI = {
     stop: () => safeInvoke('cleanup:stop'),
     keep: (filePath, tryFile, options) => safeInvoke('cleanup:keep', filePath, tryFile, options),
     discard: (filePath) => safeInvoke('cleanup:discard', filePath),
+    findSignatures: (filePath) => safeInvoke('cleanup:find-signatures', filePath),
+    markRegions: (filePath, regions) => safeInvoke('cleanup:mark-regions', filePath, regions),
+    heal: (filePath, area, options) => safeInvoke('cleanup:heal', filePath, area, options),
+    healUndo: (filePath) => safeInvoke('cleanup:heal-undo', filePath),
+    healSave: (filePath) => safeInvoke('cleanup:heal-save', filePath),
+    healDiscard: (filePath) => safeInvoke('cleanup:heal-discard', filePath),
+    healState: (filePaths) => safeInvoke('cleanup:heal-state', filePaths),
     onProgress: (callback) => safeOn('cleanup:progress', callback)
   },
 

@@ -90,6 +90,16 @@ class SettingsIPC {
       }
     });
 
+    // Remove a saved key or password (a blank field keeps it, see unmaskSecrets)
+    ipcMain.handle('settings:clear-secret', async (event, secretPath) => {
+      try {
+        return await this.settingsService.clearSecret(secretPath);
+      } catch (error) {
+        console.error(`❌ Error clearing '${secretPath}':`, error);
+        return { success: false, message: error.message };
+      }
+    });
+
     // Save all settings
     ipcMain.handle('settings:save', async (event, newSettings) => {
       try {

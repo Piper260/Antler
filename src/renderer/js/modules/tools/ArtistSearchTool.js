@@ -7,6 +7,7 @@ import ArtistSearchSelection from './artist-search/selection.js';
 import ArtistSearchPreview from './artist-search/preview.js';
 import ArtistSearchDownloads from './artist-search/downloads.js';
 import ArtistSearchUpgrades from './artist-search/upgrades.js';
+import ArtistSearchXAccounts from './artist-search/xAccounts.js';
 
 console.log('🔧 ArtistSearchTool module loading...');
 
@@ -174,7 +175,8 @@ class ArtistSearchTool extends BaseTool {
 
       // Pawchive upgrades
       'find-upgrades-btn', 'upgrade-divider', 'upgrade-bar', 'upgrade-bar-text', 'review-upgrades-btn',
-      'select-upgrades-btn', 'change-creator-btn',
+      'select-upgrades-btn', 'change-creator-btn', 'find-on-x-btn',
+      'x-index-bar', 'x-index-text', 'x-index-stop-btn', 'x-index-track', 'x-index-fill',
 
       // Category (subfolder) assignment
       'category-toolbar-divider', 'bulk-category-select', 'apply-category-btn',
@@ -304,6 +306,8 @@ class ArtistSearchTool extends BaseTool {
     });
 
     this.on(this.elements.find_upgrades_btn, 'click', () => this.findUpgrades());
+    this.on(this.elements.find_on_x_btn, 'click', () => this.findOnX());
+    this.on(this.elements.x_index_stop_btn, 'click', () => window.electronAPI.x.stopIndex());
     this.on(this.elements.review_upgrades_btn, 'click', () => this.openReview());
     this.on(this.elements.select_upgrades_btn, 'click', () => this.selectUpgradedPosts());
     this.on(this.elements.change_creator_btn, 'click', () => this.changeCreator());
@@ -583,6 +587,7 @@ async searchArtist() {
   this.postCategories.clear();
   this.availableCategories = [];
   this.resetUpgrades();
+  this.resetXIndex?.();
 
   // Fetch total count in background
   this.fetchTotalCount(artistName);
@@ -610,10 +615,18 @@ async searchArtist() {
       result.posts = this.prepareResults(result.posts);
       this.currentPosts = result.posts;
       this.currentPagination = result.pagination; // Save pagination data
-      if (this.source === 'inkbunny') this.totalPostCount = result.pagination.totalCount || 0;
+      if (this.source === 'inkbunny' || this.source === 'x') this.totalPostCount = result.pagination.totalCount || 0;
       this.hasMore = result.pagination.hasMore;
       
-      this.displayPosts(result.posts, false); // false = replace existing posts
+      if (this.source === 'x' && result.indexing && !result.posts.length) {
+        // Nothing yet, but X is still indexing: show the empty grid with its
+        // progress bar instead of "No posts found".
+        this.showXWaiting();
+      } else {
+        this.displayPosts(result.posts, false); // false = replace existing posts
+      }
+      // X keeps indexing and sends the rest as it finds them.
+      if (this.source === 'x' && result.key) this.watchXIndex(result);
       this.updateStatus(`Found ${result.posts.length} posts ${this.searchMode === 'artist' ? 'by' : 'featuring'} ${artistName}`);
       
       console.log(`✅ Found ${result.posts.length} posts ${this.searchMode === 'artist' ? 'by' : 'featuring'} ${artistName}`);
@@ -630,10 +643,11 @@ async searchArtist() {
         this.showLoadMoreSection();
       }
       
-    } else {
-      this.showError(result.message, { 
-        type: result.type, 
-        details: result.details 
+    } else if (result.type !== 'superseded') {
+      // (A superseded X search was replaced by a newer one, which reports.)
+      this.showError(result.message, {
+        type: result.type,
+        details: result.details
       });
     }
     
@@ -659,15 +673,9 @@ pageLimit() {
  */
 searchSource(name, options) {
   const character = this.searchMode !== 'artist';
-  if (this.source === 'pawchive') {
-    return character
-      ? window.electronAPI.pawchive.searchByCharacter(name, options)
-      : window.electronAPI.pawchive.searchByArtist(name, options);
-  }
-  if (this.source === 'inkbunny') {
-    return character
-      ? window.electronAPI.inkbunny.searchByCharacter(name, options)
-      : window.electronAPI.inkbunny.searchByArtist(name, options);
+  if (this.source === 'pawchive' || this.source === 'inkbunny' || this.source === 'x') {
+    const api = window.electronAPI[this.source];
+    return character ? api.searchByCharacter(name, options) : api.searchByArtist(name, options);
   }
   const siteOptions = { ...options, site: this.source };
   return character
@@ -679,12 +687,13 @@ searchSource(name, options) {
  * Switch the site searched; clears the results like switching mode does.
  */
 setSource(source) {
-  this.source = ['e621', 'e926', 'inkbunny', 'pawchive'].includes(source) ? source : 'e621';
+  this.source = ['e621', 'e926', 'inkbunny', 'pawchive', 'x'].includes(source) ? source : 'e621';
   try { localStorage.setItem('antler-search-source', this.source); } catch (_) { /* not remembered */ }
   this.suggestionCache?.clear();
+  this.resetXIndex?.();
   this.setSearchMode(this.searchMode);
   this.updateUpgradeButton?.();
-  const names = { e621: 'e621', e926: 'e926', inkbunny: 'Inkbunny', pawchive: 'Pawchive' };
+  const names = { e621: 'e621', e926: 'e926', inkbunny: 'Inkbunny', pawchive: 'Pawchive', x: 'X' };
   this.updateStatus(`Ready - searching ${names[this.source]}`);
 }
 
@@ -702,9 +711,9 @@ prepareResults(posts) {
  * Fetch total post count for artist/character
  */
 async fetchTotalCount(name) {
-  // Inkbunny's search reports its own total and Pawchive gives none;
-  // e621's tag counts don't apply to either.
-  if (this.source === 'inkbunny' || this.source === 'pawchive') return;
+  // Inkbunny and X report their own totals and Pawchive gives none;
+  // e621's tag counts don't apply to them.
+  if (this.source === 'inkbunny' || this.source === 'pawchive' || this.source === 'x') return;
   try {
     const category = this.searchMode === 'artist' ? 'artist' : 'character';
     // Fetch suggestions to find the exact tag count
@@ -1397,6 +1406,8 @@ async loadMorePosts() {
         this.showNoMorePosts();
       }
 
+    } else if (result.type === 'superseded') {
+      // A newer X search replaced this one; it shows its own results.
     } else {
       // No more posts
       this.hasMore = false;
@@ -1547,7 +1558,7 @@ cleanup() {
 }
 
 window.mixMethods(ArtistSearchTool, ArtistSearchTemplate, ArtistSearchSuggestions, ArtistSearchCategories,
-  ArtistSearchSelection, ArtistSearchPreview, ArtistSearchDownloads, ArtistSearchUpgrades);
+  ArtistSearchSelection, ArtistSearchPreview, ArtistSearchDownloads, ArtistSearchUpgrades, ArtistSearchXAccounts);
 
 // Export the tool class
 window.ArtistSearchTool = ArtistSearchTool;

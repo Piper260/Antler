@@ -90,8 +90,6 @@ class AntlerApp {
       const PostLookupTool = window.PostLookupTool;
       const ArtistSearchTool = window.ArtistSearchTool;
       const TagEditorTool = window.TagEditorTool;
-      const AutoPrompterTool  = window.AutoPrompterTool;
-      const PromptEditorTool  = window.PromptEditorTool;
       const ImageResizerTool  = window.ImageResizerTool;
       const ImageUpscalerTool = window.ImageUpscalerTool;
       
@@ -113,20 +111,6 @@ class AntlerApp {
         const tagEditorTool = new TagEditorTool();
         this.tools.set(tagEditorTool.id, tagEditorTool);
         console.log(`✅ Loaded tool: ${tagEditorTool.name}`);
-      }
-
-      // Import the AutoPrompterTool class
-      if (AutoPrompterTool) {
-        const autoPrompterTool = new AutoPrompterTool();
-        this.tools.set(autoPrompterTool.id, autoPrompterTool);
-        console.log(`✅ Loaded tool: ${autoPrompterTool.name}`);
-      }
-
-      // Import the PromptEditorTool class
-      if (PromptEditorTool) {
-        const promptEditorTool = new PromptEditorTool();
-        this.tools.set(promptEditorTool.id, promptEditorTool);
-        console.log(`✅ Loaded tool: ${promptEditorTool.name}`);
       }
 
       // Import the ImageResizerTool class

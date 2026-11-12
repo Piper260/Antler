@@ -144,22 +144,6 @@ const electronAPI = {
     onStatus: (callback) => safeOn('update:status', callback)
   },
 
-  // AI API
-  ai: {
-    testConnection: () => safeInvoke('ai:test-connection'),
-    isEnabled: () => safeInvoke('ai:is-enabled'),
-    optimizePrompt: (tags, options) => safeInvoke('ai:optimize-prompt', tags, options),
-    generateNegativePrompt: (positiveTags, options) => safeInvoke('ai:generate-negative-prompt', positiveTags, options),
-    chatCompletion: (messages, options) => safeInvoke('ai:chat-completion', messages, options),
-    getModels: () => safeInvoke('ai:get-models'),
-    listOllamaModels: () => safeInvoke('ai:list-ollama-models'),
-    checkOllama: () => safeInvoke('ai:check-ollama'),
-    searchHfModels: (query, limit) => safeInvoke('ai:search-hf-models', query, limit),
-    pullOllamaModel: (modelName) => safeInvoke('ai:pull-ollama-model', modelName),
-    onOllamaPullProgress: (callback) => safeOn('ai:ollama-pull-progress', callback),
-    onProgress: (callback) => safeOn('ai:progress', callback)
-  },
-
   // Utility functions
   utils: {
     /**
@@ -307,13 +291,6 @@ const electronAPI = {
     healDiscard: (filePath) => safeInvoke('cleanup:heal-discard', filePath),
     healState: (filePaths) => safeInvoke('cleanup:heal-state', filePaths),
     onProgress: (callback) => safeOn('cleanup:progress', callback)
-  },
-
-  // Prompts saved from the Auto Prompter
-  prompts: {
-    list: () => safeInvoke('prompts:list'),
-    save: (entry) => safeInvoke('prompts:save', entry),
-    remove: (id) => safeInvoke('prompts:delete', id)
   },
 
   // Natural-language captions (Tag Editor > Caption with AI)

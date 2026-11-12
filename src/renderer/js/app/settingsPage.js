@@ -55,10 +55,9 @@ class AppSettingsPage {
       'e621-username': 'e621.username',
       'e621-api-key': 'e621.apiKey',
       'inkbunny-username': 'inkbunny.username',
-      'inkbunny-password': 'inkbunny.password',
-      'hf-api-token': 'huggingface.apiToken'
+      'inkbunny-password': 'inkbunny.password'
     };
-    const secrets = new Set(['e621.apiKey', 'inkbunny.password', 'huggingface.apiToken']);
+    const secrets = new Set(['e621.apiKey', 'inkbunny.password']);
     for (const [id, settingPath] of Object.entries(fields)) {
       const input = document.getElementById(id);
       if (!input) continue;
@@ -157,47 +156,6 @@ class AppSettingsPage {
       
       console.log('⚙️ App settings loaded:', settings);
 
-      // Load Hugging Face AI settings
-      const aiEnableCheckbox = document.getElementById('ai-enable-checkbox');
-      const hfTokenInput = document.getElementById('hf-api-token');
-      const hfModelSelect = document.getElementById('hf-model-select');
-      
-      if (aiEnableCheckbox) {
-        const enableAI = settings.huggingface?.enableAI || false;
-        aiEnableCheckbox.checked = enableAI;
-        this.toggleAISettings(enableAI);
-      }
-      
-      if (hfTokenInput) hfTokenInput.value = settings.huggingface?.apiToken || '';
-      if (hfModelSelect) {
-        // The list and the current choice come from the AI service, which
-        // swaps a withdrawn model for the default.
-        const info = await window.electronAPI.ai.getModels().catch(() => null);
-        const models = info?.models || {};
-        hfModelSelect.innerHTML = Object.entries(models)
-          .map(([id, m]) => `<option value="${id}">${m.name}${m.note ? ` (${m.note})` : ''}</option>`)
-          .join('');
-        hfModelSelect.value = info?.preferred || Object.keys(models)[0] || '';
-      }
-
-      // Populate custom models into the select and list
-      this._loadCustomModelsUI(settings.huggingface?.customModels || [], settings.huggingface?.preferredModel);
-      
-      const tempSlider = document.getElementById('ai-temperature-slider');
-      const tempValue = document.getElementById('temp-value');
-      if (tempSlider && tempValue) {
-        const temp = settings.huggingface?.temperature || 0.7;
-        tempSlider.value = temp;
-        tempValue.textContent = temp;
-      }
-      
-      console.log('🤖 AI settings loaded:', {
-        enabled: settings.huggingface?.enableAI,
-        hasToken: settings.huggingface?.apiToken ? 'Set' : 'Missing',
-        model: settings.huggingface?.preferredModel,
-        temperature: settings.huggingface?.temperature
-      });
-
       this.showSecretClearButtons(settings);
     }
 
@@ -213,7 +171,6 @@ class AppSettingsPage {
   setupSettingsEventListeners() {
     // Test buttons (don't save, just test)
     const testE621Btn = document.getElementById('test-credentials-btn');
-    const testAIBtn = document.getElementById('test-ai-btn');
     
     if (testE621Btn) {
       testE621Btn.addEventListener('click', () => this.testE621Credentials());
@@ -233,52 +190,10 @@ class AppSettingsPage {
     document.getElementById('x-sign-out-btn')?.addEventListener('click', () => this.xSignOut());
     this.showXStatus();
 
-    if (testAIBtn) {
-      testAIBtn.addEventListener('click', () => this.testAIConnection());
-    }
-
     // Master Save All button
     const saveAllBtn = document.getElementById('save-all-settings-btn');
     if (saveAllBtn) {
       saveAllBtn.addEventListener('click', () => this.saveAllSettings());
-    }
-
-    // AI settings event listeners
-    const aiEnableCheckbox = document.getElementById('ai-enable-checkbox');
-    const hfLearnMore = document.getElementById('hf-learn-more');
-    
-    if (aiEnableCheckbox) {
-      aiEnableCheckbox.addEventListener('change', (e) => {
-        this.toggleAISettings(e.target.checked);
-      });
-    }
-    
-    if (hfLearnMore) {
-      hfLearnMore.addEventListener('click', (e) => {
-        e.preventDefault();
-        window.electronAPI.utils.openExternal('https://huggingface.co/docs/api-inference/index');
-      });
-    }
-
-    // HuggingFace models explorer link
-    const hfModelsLink = document.getElementById('hf-models-link');
-    if (hfModelsLink) {
-      hfModelsLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        window.electronAPI.utils.openExternal('https://huggingface.co/models?pipeline_tag=text-generation&sort=trending');
-      });
-    }
-
-    // Custom model live-search autocomplete
-    this._setupHFModelSearch();
-
-    // Temperature slider
-    const tempSlider = document.getElementById('ai-temperature-slider');
-    const tempValue = document.getElementById('temp-value');
-    if (tempSlider && tempValue) {
-      tempSlider.addEventListener('input', (e) => {
-        tempValue.textContent = e.target.value;
-      });
     }
 
     // App settings button
@@ -432,21 +347,12 @@ class AppSettingsPage {
     // Get all form values
     const e621Username = document.getElementById('e621-username')?.value.trim() || '';
     const e621ApiKey = document.getElementById('e621-api-key')?.value.trim() || '';
-    const aiEnabled = document.getElementById('ai-enable-checkbox')?.checked || false;
-    const aiToken = document.getElementById('hf-api-token')?.value.trim() || '';
-    const aiModel = document.getElementById('hf-model-select')?.value || 'Qwen/Qwen3.8-27B';
-    const aiTemp = parseFloat(document.getElementById('ai-temperature-slider')?.value) || 0.7;
-    const aiCustomModels = this._getCustomModelsFromUI();
     const inkbunnyUsername = document.getElementById('inkbunny-username')?.value.trim() || '';
     const inkbunnyPassword = document.getElementById('inkbunny-password')?.value || '';
     
     console.log('📝 Form values being saved:', {
       e621Username,
-      e621ApiKey: e621ApiKey ? '***' : '(empty)',
-      aiEnabled,
-      aiToken: aiToken ? '***' : '(empty)',
-      aiModel,
-      aiTemp
+      e621ApiKey: e621ApiKey ? '***' : '(empty)'
     });
     
     const settings = {
@@ -457,13 +363,6 @@ class AppSettingsPage {
       inkbunny: {
         username: inkbunnyUsername,
         password: inkbunnyPassword
-      },
-      huggingface: {
-        apiToken: aiToken,
-        enableAI: aiEnabled,
-        preferredModel: aiModel,
-        temperature: aiTemp,
-        customModels: aiCustomModels
       },
       app: {
         theme: window.AntlerThemes.current(),
@@ -746,345 +645,4 @@ class AppSettingsPage {
     }, 10000);
   }
 }
-
-  /**
-   * Toggle AI settings visibility
-   */
-  toggleAISettings(enabled) {
-    const tokenGroup = document.getElementById('ai-token-group');
-    const modelGroup = document.getElementById('ai-model-group');
-    const customModelGroup = document.getElementById('ai-custom-model-group');
-    const temperatureGroup = document.getElementById('ai-temperature-group');
-    const actionsGroup = document.getElementById('ai-actions-group');
-    
-    if (tokenGroup) tokenGroup.style.display = enabled ? 'block' : 'none';
-    if (modelGroup) modelGroup.style.display = enabled ? 'block' : 'none';
-    if (customModelGroup) customModelGroup.style.display = enabled ? 'block' : 'none';
-    if (temperatureGroup) temperatureGroup.style.display = enabled ? 'block' : 'none';
-    if (actionsGroup) actionsGroup.style.display = enabled ? 'flex' : 'none';
-    
-    if (!enabled) {
-      const statusEl = document.getElementById('ai-status');
-      if (statusEl) statusEl.style.display = 'none';
-    }
-  }
-
-  /**
-   * Test AI connection
-   */
-  async testAIConnection() {
-    console.log('🧪 Testing AI connection...');
-    
-    const testBtn = document.getElementById('test-ai-btn');
-    const statusEl = document.getElementById('ai-status');
-    
-    // Get current token from input
-    const tokenInput = document.getElementById('hf-api-token');
-    const token = tokenInput?.value.trim();
-    
-    if (!token) {
-      this.showAIStatus('Please enter your Hugging Face API token first', 'warning');
-      return;
-    }
-    
-    // Show loading state
-    testBtn.disabled = true;
-    testBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
-    this.showAIStatus('Testing AI connection...', 'info');
-    
-    try {
-      // Save token temporarily to test
-      const modelSelect = document.getElementById('hf-model-select');
-      const settings = {
-        huggingface: {
-          apiToken: token,
-          enableAI: true,
-          preferredModel: modelSelect?.value || 'Qwen/Qwen3.8-27B'
-        }
-      };
-      
-      await window.electronAPI.settings.save(settings);
-      
-      // Test the connection
-      const result = await window.electronAPI.ai.testConnection();
-      
-      if (result.success) {
-        this.showAIStatus(`Connection successful! Using ${result.model}`, 'success');
-        this.showToast('AI connection test successful!', 'success');
-        // Reflect the enabled state in the UI checkbox so Save All doesn't revert it
-        const enableCheckbox = document.getElementById('ai-enable-checkbox');
-        if (enableCheckbox && !enableCheckbox.checked) {
-          enableCheckbox.checked = true;
-          this.toggleAISettings(true);
-        }
-      } else {
-        this.showAIStatus(`Connection failed: ${result.message}`, 'error');
-        this.showToast('AI connection failed', 'error');
-      }
-      
-    } catch (error) {
-      console.error('❌ Error testing AI connection:', error);
-      this.showAIStatus('Error testing connection', 'error');
-      this.showToast('Error testing AI connection', 'error');
-    } finally {
-      // Restore button state
-      testBtn.disabled = false;
-      testBtn.innerHTML = '<i class="fas fa-flask"></i> Test AI Connection';
-    }
-  }
-
-  /**
-   * Save AI settings
-   */
-  async saveAISettings() {
-    console.log('💾 Saving AI settings...');
-    
-    const saveBtn = document.getElementById('save-ai-settings-btn');
-    const enableCheckbox = document.getElementById('ai-enable-checkbox');
-    const tokenInput = document.getElementById('hf-api-token');
-    const modelSelect = document.getElementById('hf-model-select');
-    const tempSlider = document.getElementById('ai-temperature-slider');
-    
-    const settings = {
-      huggingface: {
-        apiToken: tokenInput?.value.trim() || '',
-        enableAI: enableCheckbox?.checked || false,
-        preferredModel: modelSelect?.value || 'Qwen/Qwen3.8-27B',
-        temperature: parseFloat(tempSlider?.value) || 0.7,
-        customModels: this._getCustomModelsFromUI()
-      }
-    };
-    
-    // Show loading state
-    saveBtn.disabled = true;
-    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-    
-    try {
-      const result = await window.electronAPI.settings.save(settings);
-      
-      if (result.success) {
-        this.showAIStatus('AI settings saved successfully!', 'success');
-        this.showToast('AI settings saved!', 'success');
-      } else {
-        this.showAIStatus('Failed to save AI settings', 'error');
-        this.showToast('Failed to save AI settings', 'error');
-      }
-      
-    } catch (error) {
-      console.error('❌ Error saving AI settings:', error);
-      this.showAIStatus('Error saving settings', 'error');
-      this.showToast('Error saving AI settings', 'error');
-    } finally {
-      // Restore button state
-      saveBtn.disabled = false;
-      saveBtn.innerHTML = '<i class="fas fa-save"></i> Save AI Settings';
-    }
-  }
-
-  /**
-   * Show AI status message
-   */
-  showAIStatus(message, type = 'info') {
-    const statusEl = document.getElementById('ai-status');
-    if (!statusEl) return;
-    
-    statusEl.style.display = 'block';
-    statusEl.className = `credentials-status status-${type}`;
-    statusEl.textContent = message;
-    
-    // Auto-hide after 10 seconds
-    setTimeout(() => {
-      statusEl.style.display = 'none';
-    }, 10000);
-  }
-
-  /**
-   * Returns the current list of custom model IDs from the UI list.
-   */
-  _getCustomModelsFromUI() {
-    const list = document.getElementById('hf-custom-models-list');
-    if (!list) return [];
-    return Array.from(list.querySelectorAll('[data-model-id]')).map(el => el.dataset.modelId);
-  }
-
-  /**
-   * Populate the custom-models list and inject options into the model <select>.
-   */
-  _loadCustomModelsUI(customModels = [], selectedModel = '') {
-    const list = document.getElementById('hf-custom-models-list');
-    const select = document.getElementById('hf-model-select');
-    if (!list || !select) return;
-
-    // Remove any previously injected custom options
-    select.querySelectorAll('[data-custom]').forEach(opt => opt.remove());
-
-    // Re-render list and inject options
-    list.innerHTML = '';
-    for (const modelId of customModels) {
-      this._addCustomModelToUI(modelId, select, list);
-    }
-
-    // Restore selection after re-populating, unless that model is no longer
-    // offered (the AI service has already picked its replacement).
-    if (selectedModel && select.querySelector(`option[value="${CSS.escape(selectedModel)}"]`)) select.value = selectedModel;
-  }
-
-  /**
-   * Add a single custom model to the list widget and the <select>.
-   */
-  _addCustomModelToUI(modelId, select, list) {
-    if (!modelId) return;
-    // Avoid duplicates in the select
-    if (select.querySelector(`option[value="${CSS.escape(modelId)}"]`)) return;
-
-    const shortName = modelId.split('/').pop();
-
-    // Add option to select
-    const opt = document.createElement('option');
-    opt.value = modelId;
-    opt.textContent = `${shortName} (custom)`;
-    opt.dataset.custom = '1';
-    select.appendChild(opt);
-
-    // Add row to list
-    const row = document.createElement('div');
-    row.dataset.modelId = modelId;
-    row.className = 'settings-model-row';
-    row.innerHTML = `
-      <span title="${this.escapeHtml(modelId)}">${this.escapeHtml(modelId)}</span>
-      <button class="btn-icon" title="Remove">
-        <i class="fas fa-times"></i>
-      </button>
-    `;
-    row.querySelector('button').addEventListener('click', () => {
-      row.remove();
-      select.querySelector(`option[value="${CSS.escape(modelId)}"]`)?.remove();
-      // If selected was this model, reset to first
-      if (select.value === modelId) select.selectedIndex = 0;
-    });
-    list.appendChild(row);
-  }
-
-  /**
-   * Wire up the debounced live-search autocomplete for the HF custom model input.
-   */
-  _setupHFModelSearch() {
-    const input    = document.getElementById('hf-custom-model-input');
-    const dropdown = document.getElementById('hf-model-search-dropdown');
-    const addBtn   = document.getElementById('hf-add-custom-model-btn');
-    if (!input || !dropdown) return;
-
-    let debounceTimer = null;
-
-    const closeDropdown = () => {
-      dropdown.style.display = 'none';
-      dropdown.innerHTML = '';
-    };
-
-    const selectModel = (modelId) => {
-      input.value = modelId;
-      closeDropdown();
-      // Auto-add to the list
-      const select = document.getElementById('hf-model-select');
-      const list   = document.getElementById('hf-custom-models-list');
-      this._addCustomModelToUI(modelId, select, list);
-      select.value = modelId;
-      input.value  = '';
-    };
-
-    const showDropdownMessage = (msg) => {
-      dropdown.innerHTML = `<div class="settings-dropdown-message">${msg}</div>`;
-      dropdown.style.display = 'block';
-    };
-
-    const renderResults = (models) => {
-      dropdown.innerHTML = '';
-      if (!models.length) {
-        showDropdownMessage('No models found. Try a different query.');
-        return;
-      }
-      for (const m of models) {
-        const item = document.createElement('div');
-        item.className = 'settings-dropdown-item';
-        const dlStr = m.downloads >= 1000
-          ? `${(m.downloads / 1000).toFixed(1)}k`
-          : String(m.downloads);
-
-        // Inference API availability, as plain coloured text
-        let inference = '<span class="settings-dropdown-meta text-danger" title="No Inference API - Ollama only">No API</span>';
-        if (m.inference === 'warm') {
-          inference = '<span class="settings-dropdown-meta text-success" title="Inference API: active">API ready</span>';
-        } else if (m.inference === 'cold') {
-          inference = '<span class="settings-dropdown-meta text-warning" title="Inference API: cold start (slower)">API cold</span>';
-        }
-
-        item.innerHTML = `
-          <span class="settings-dropdown-name">${this.escapeHtml(m.id)}</span>
-          ${inference}
-          <span class="settings-dropdown-meta" title="Downloads">${dlStr} downloads</span>
-        `;
-        item.addEventListener('mousedown', (e) => {
-          e.preventDefault(); // prevent input blur before click
-          selectModel(m.id);
-        });
-        dropdown.appendChild(item);
-      }
-      dropdown.style.display = 'block';
-    };
-
-    input.addEventListener('input', () => {
-      clearTimeout(debounceTimer);
-      const q = input.value.trim();
-      if (q.length < 2) {
-        closeDropdown();
-        return;
-      }
-      showDropdownMessage('Searching...');
-      debounceTimer = setTimeout(async () => {
-        try {
-          const result = await window.electronAPI.ai.searchHfModels(q, 10);
-          if (result.success) {
-            renderResults(result.models);
-          } else {
-            showDropdownMessage('Search unavailable. Paste the model ID manually.');
-          }
-        } catch {
-          showDropdownMessage('Search unavailable. Paste the model ID manually.');
-        }
-      }, 350);
-    });
-
-    // Close dropdown when focus leaves the input (unless clicking a result)
-    input.addEventListener('blur', () => {
-      setTimeout(closeDropdown, 150);
-    });
-
-    // Enter key: add whatever is in the input directly
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const modelId = input.value.trim();
-        if (modelId) selectModel(modelId);
-      }
-      if (e.key === 'Escape') closeDropdown();
-    });
-
-    // "Add" button: add the raw typed value (with colon-strip validation)
-    if (addBtn) {
-      addBtn.addEventListener('click', () => {
-        let modelId = input.value.trim();
-        if (!modelId) return;
-        if (modelId.includes(':')) {
-          const stripped = modelId.split(':')[0].trim();
-          this.showToast(`Stripped Ollama tag — using: ${stripped}`, 'warning');
-          modelId = stripped;
-        }
-        if (!modelId.includes('/')) {
-          this.showToast('Use the format "owner/model-name"', 'error');
-          return;
-        }
-        selectModel(modelId);
-      });
-    }
-  }
 }

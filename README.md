@@ -43,19 +43,12 @@ Everything runs on your own machine. Antler talks to e621, and to your own Comfy
 | **Image Resizer** | Batch-resize a set to training resolution. |
 | **Image Organizer** | Sort generated images into per-artist folders using their embedded metadata. |
 
-### Prompt
-
-| Tool | What it does |
-| --- | --- |
-| **Auto Prompter** | Turn a post (or tags you paste) into a prompt for the base model you use: Illustrious/NoobAI, Pony, SDXL, or Flux in plain sentences. Save the ones you like and reuse them later. |
-| **Prompt Editor** | Refine prompts by hand or with an LLM through Hugging Face (Qwen 3.8, DeepSeek V3.2, Gemma 4 and others) or a model in Ollama. |
-
 ## Requirements
 
 - **Windows 10 or 11** (x64), **macOS** on Apple Silicon, or **Linux** (x64).
 - **An e621 account** with an API key.
 - Optional: a **ComfyUI** server with Flux Fill for Image Cleanup.
-- Optional: **Ollama** for AI captions (with a vision model such as `gemma3`) and the prompt tools, or a **Hugging Face** token for the prompt tools.
+- Optional: **Ollama** with a vision model (such as `gemma3`) for AI captions in the Tag Editor.
 
 The bundled ncnn upscalers and GPU-accelerated tagging (DirectML) are Windows-only. On macOS and Linux the Image Upscaler uses the UltraSharp V2 models and tagging runs on the CPU.
 
@@ -90,7 +83,6 @@ Open **Settings** on first launch.
 
 1. **e621 account.** Enter your username and API key (on e621: Account > API Access). Keys are encrypted on disk.
 2. **Storage.** Antler keeps datasets in `Documents\Antler` unless you choose otherwise. Add any folders you already keep datasets in as libraries, and pick which one new downloads go to.
-3. **LLM (optional).** Connect Ollama or Hugging Face for the prompt tools.
 
 Image Cleanup asks for the ComfyUI server address inside the tool.
 

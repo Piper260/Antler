@@ -23,8 +23,6 @@ const UtilsIPC = require('./ipc/UtilsIPC');
 const TagEditorIPC = require('./ipc/TagEditorIPC');
 const { UpdateService } = require('./services/UpdateService');
 const UpdateIPC = require('./ipc/UpdateIPC');
-const AIService = require('./services/AIService');
-const AIHandlers = require('./ipc/AIHandlers');
 const DialogIPC = require('./ipc/DialogIPC');
 const SystemIPC = require('./ipc/SystemIPC');
 const ImageUpscalerIPC = require('./ipc/ImageUpscalerIPC');
@@ -34,7 +32,6 @@ const VideoFrameIPC = require('./ipc/VideoFrameIPC');
 const CleanupIPC = require('./ipc/CleanupIPC');
 const ModelsIPC = require('./ipc/ModelsIPC');
 const CaptionIPC = require('./ipc/CaptionIPC');
-const PromptLibraryIPC = require('./ipc/PromptLibraryIPC');
 const versionInfo = require('../shared/version');
 
 // Log version information on startup
@@ -73,8 +70,6 @@ let utilsIPC;
 let tagEditorIPC;
 let updateService;
 let updateIPC;
-let aiService;
-let aiHandlers;
 
 console.log('🚀 Starting Antler...');
 
@@ -188,7 +183,6 @@ async function setupServices() {
   updateService = new UpdateService();
 
   // Initialize AI service
-  aiService = new AIService(settingsService);
   
   // Initialize IPC handlers
   settingsIPC = new SettingsIPC(settingsService);
@@ -200,7 +194,6 @@ async function setupServices() {
   utilsIPC = new UtilsIPC(settingsService);
   tagEditorIPC = new TagEditorIPC(settingsService);
   updateIPC = new UpdateIPC(updateService);
-  aiHandlers = new AIHandlers(aiService);
   new DialogIPC();
   new SystemIPC();
   new ImageUpscalerIPC();
@@ -210,7 +203,6 @@ async function setupServices() {
   new CleanupIPC();
   new ModelsIPC();
   new CaptionIPC(settingsService);
-  new PromptLibraryIPC();
 
   console.log('✅ Services initialized');
 }

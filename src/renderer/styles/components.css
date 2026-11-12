@@ -959,9 +959,7 @@ input[type="radio"] {
   color: var(--text-primary);
 }
 
-.segmented-btn.is-active,
-.ap-provider-btn--active,
-.pe-provider-btn--active {
+.segmented-btn.is-active {
   background: var(--accent-primary-muted);
   color: var(--text-primary);
 }

@@ -1,7 +1,7 @@
 /**
  * performanceUtils.js
  * Performance optimization utilities (debounce, throttle, etc.)
- * Consolidated from: preload.js, ArtistSearchTool.js, AutoPrompterTool.js
+ * Consolidated from: preload.js, ArtistSearchTool.js
  */
 
 /**

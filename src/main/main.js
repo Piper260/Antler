@@ -100,11 +100,14 @@ function configureCachePath() {
 // e621's image CDN rejects (403) cross-site no-cors requests that lack an
 // e621 Referer. The renderer is loaded from file://, so <img> requests carry
 // no Referer and every thumbnail fails. Supply one for e621 image hosts, and
-// the same for Pawchive's image and file servers.
+// the same for Pawchive's image and file servers and Inkbunny's
+// (*.ib.metapix.net, which answers 403 without an inkbunny.net Referer).
 function configureImageReferer() {
-  const filter = { urls: ['https://static1.e621.net/*', 'https://static1.e926.net/*', 'https://*.pawchive.pw/*'] };
+  const filter = { urls: ['https://static1.e621.net/*', 'https://static1.e926.net/*', 'https://*.pawchive.pw/*', 'https://*.ib.metapix.net/*'] };
   session.defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
-    const referer = details.url.includes('pawchive.pw') ? 'https://pawchive.pw/' : 'https://e621.net/';
+    const referer = details.url.includes('pawchive.pw') ? 'https://pawchive.pw/'
+      : details.url.includes('.ib.metapix.net') ? 'https://inkbunny.net/'
+        : 'https://e621.net/';
     callback({ requestHeaders: { ...details.requestHeaders, Referer: referer } });
   });
 }

@@ -34,6 +34,7 @@ function headersFor(url) {
     const host = new URL(url).hostname;
     if (/(^|\.)e621\.net$|(^|\.)e926\.net$/.test(host)) headers.Referer = 'https://e621.net/';
     else if (/(^|\.)pawchive\.pw$/.test(host)) headers.Referer = 'https://pawchive.pw/';
+    else if (/\.ib\.metapix\.net$/.test(host)) headers.Referer = 'https://inkbunny.net/';
   } catch (_) { /* invalid URL: fetch will say so */ }
   return headers;
 }

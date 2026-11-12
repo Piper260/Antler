@@ -580,6 +580,18 @@ pre {
   color: var(--error);
 }
 
+/* A message shown for a few seconds in place of the status (app.showToast). */
+.status-note {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.status-note-success {
+  color: var(--success);
+}
+
 .footer-info {
   gap: 10px;
 }

@@ -859,19 +859,29 @@ input[type="radio"] {
   pointer-events: none;
 }
 
+/* Warnings and errors only; routine news goes to the status bar (.status-note). */
 .toast {
-  max-width: 380px;
-  padding: 9px 12px;
-  border: 1px solid var(--border-hover);
-  border-left-width: 3px;
+  max-width: 320px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-primary);
+  border-left-width: 2px;
   border-radius: var(--radius-md);
   background: var(--bg-elevated);
-  box-shadow: var(--shadow-lg);
-  font-size: var(--text-md);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-sm);
+  line-height: 1.4;
   color: var(--text-primary);
   opacity: 0;
   pointer-events: auto;
-  transition: opacity var(--transition-slow);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+/* The update notice has buttons, so it isn't closed by a click. */
+.toast.update-toast {
+  max-width: 340px;
+  padding: 10px 12px;
+  cursor: default;
 }
 
 .toast.show {
@@ -885,8 +895,8 @@ input[type="radio"] {
 }
 
 .toast-content i {
-  margin-top: 3px;
-  font-size: var(--text-sm);
+  margin-top: 2px;
+  font-size: var(--text-xs);
 }
 
 .toast-success { border-left-color: var(--success); }

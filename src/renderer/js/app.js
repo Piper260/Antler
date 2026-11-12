@@ -645,6 +645,7 @@ class AntlerApp {
     this.footerElements = {
       statusIndicator: document.getElementById('global-status-indicator'),
       statusText: document.getElementById('global-status-text'),
+      statusNote: document.getElementById('global-status-note'),
       cacheInfo: document.getElementById('footer-cache-info'),
       apiStatus: document.getElementById('footer-api-status'),
       downloads: document.getElementById('footer-downloads'),
@@ -975,36 +976,83 @@ class AntlerApp {
   }
 
   /**
-   * Show toast notification
+   * Tells the user something. Routine news (info, success) is a note in the
+   * status bar, where it doesn't cover the page; warnings and errors are a
+   * small card in the corner, since those shouldn't be missed. Repeats of the
+   * same card merge, at most two cards show, and a card closes on click and
+   * stays while the mouse is over it.
    */
   showToast(message, type = 'info', duration = 4000) {
-    console.log(`🍞 Showing toast: ${message} (${type})`);
+    const text = String(message ?? '');
+    if (type === 'info' || type === 'success') {
+      this.showStatusNote(text, type, duration);
+      return;
+    }
+    this.showToastCard(text, type, duration);
+  }
 
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.innerHTML = `
-      <div class="toast-content">
-        <i class="fas ${this.getToastIcon(type)}"></i>
-        <span>${message}</span>
-      </div>
-    `;
+  /** A note in the status bar's message slot, then back to the bar's own status. */
+  showStatusNote(text, type, duration) {
+    const note = this.footerElements?.statusNote;
+    const status = this.footerElements?.statusText;
+    if (!note || !status) {
+      this.showToastCard(text, type, duration);
+      return;
+    }
+    // Long enough to read: about 15 characters a second, 3 to 8 seconds.
+    const shown = Math.min(8000, Math.max(3000, duration, text.length * 65));
+    note.textContent = text.replace(/<[^>]*>/g, '');
+    note.title = note.textContent;
+    note.className = `status-note status-note-${type}`;
+    note.hidden = false;
+    status.hidden = true;
+    clearTimeout(this.statusNoteTimer);
+    this.statusNoteTimer = setTimeout(() => {
+      note.hidden = true;
+      status.hidden = false;
+    }, shown);
+  }
 
-    this.toastContainer.appendChild(toast);
+  showToastCard(text, type, duration) {
+    const container = this.toastContainer;
+    if (!container) return;
+    const shown = Math.max(type === 'error' ? 7000 : 5000, duration);
+    const plain = text.replace(/<[^>]*>/g, '');
 
-    // Show toast with animation
-    setTimeout(() => {
-      toast.classList.add('show');
-    }, 100);
+    // The same message again: keep the one card and restart its clock.
+    let toast = [...container.querySelectorAll('.toast:not(.update-toast)')].find(t => t.dataset.message === plain);
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.dataset.message = plain;
+      toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+      toast.title = 'Click to close';
+      toast.innerHTML = `<div class="toast-content"><i class="fas ${this.getToastIcon(type)}"></i><span></span></div>`;
+      toast.querySelector('span').textContent = plain;
+      toast.addEventListener('click', () => this.closeToast(toast));
+      toast.addEventListener('mouseenter', () => clearTimeout(toast.closeTimer));
+      toast.addEventListener('mouseleave', () => this.scheduleToastClose(toast, 2500));
+      container.appendChild(toast);
+      requestAnimationFrame(() => toast.classList.add('show'));
+      // At most two cards: the oldest goes, errors last.
+      const cards = [...container.querySelectorAll('.toast:not(.update-toast):not(.closing)')];
+      const order = [...cards.filter(card => !card.classList.contains('toast-error')), ...cards.filter(card => card.classList.contains('toast-error'))]
+        .filter(card => card !== toast);
+      order.slice(0, Math.max(0, cards.length - 2)).forEach(card => this.closeToast(card));
+    }
+    this.scheduleToastClose(toast, shown);
+  }
 
-    // Hide and remove toast
-    setTimeout(() => {
-      toast.classList.remove('show');
-      setTimeout(() => {
-        if (toast.parentNode) {
-          toast.parentNode.removeChild(toast);
-        }
-      }, 400);
-    }, duration);
+  scheduleToastClose(toast, delay) {
+    clearTimeout(toast.closeTimer);
+    toast.closeTimer = setTimeout(() => this.closeToast(toast), delay);
+  }
+
+  closeToast(toast) {
+    clearTimeout(toast.closeTimer);
+    toast.classList.add('closing');
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 200);
   }
 
   /**

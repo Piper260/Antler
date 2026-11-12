@@ -1,3 +1,5 @@
+import ImageCleanupHealing from './image-cleanup/healing.js';
+
 console.log('🔧 ImageCleanupTool module loading...');
 
 // Image Cleanup: mark speech bubbles, captions or signatures on dataset
@@ -69,6 +71,7 @@ class ImageCleanupTool {
     if (this.run) this.run.stopped = true;
     this._flushMask();
     document.removeEventListener('keydown', this._keyHandler);
+    this._healTeardown?.();
     window.removeEventListener('resize', this._resizeHandler);
     this._removeProgress?.();
     this._releaseUrls();
@@ -119,6 +122,8 @@ class ImageCleanupTool {
             </div>
             <div class="ic-toolbar-actions">
               <button class="btn" id="ic-find-all-btn" title="Find bubbles on every image that isn't marked yet">Find Bubbles in All</button>
+              <button class="btn" id="ic-sig-all-btn" title="Find signatures and watermarks on every image, to sign off one by one or all at once">Find Signatures in All</button>
+              <button class="btn" id="ic-heal-all-btn" style="display:none" title="Heal every find you haven't skipped, on every image, and save them">Heal All Finds</button>
               <button class="btn" id="ic-clean-one-btn" title="Clean only the image shown (C)">Clean This Image</button>
               <button class="btn btn-primary" id="ic-clean-btn">Clean Marked</button>
               <button class="btn" id="ic-stop-btn" style="display:none"><i class="fas fa-stop"></i> Stop</button>
@@ -151,10 +156,12 @@ class ImageCleanupTool {
                   <button class="btn btn-sm" data-mode="erase" title="Erase part of the mask (E)">Erase</button>
                   <button class="btn btn-sm" data-mode="box" title="Drag a box to mark (X)">Box</button>
                   <button class="btn btn-sm" data-mode="remove" title="Click a marked area to remove all of it (R)">Remove Area</button>
+                  <button class="btn btn-sm" data-mode="heal" title="Spot heal: paint over a mark and it's filled in from around it, right here without ComfyUI (H)">Heal</button>
                   <label class="ic-setting" title="Brush size ([ and ])">Size
                     <input type="range" id="ic-brush" min="4" max="200" step="2">
                   </label>
                   <button class="btn btn-sm" id="ic-find-btn" title="Find bubbles on this image (F)">Find Bubbles</button>
+                  <button class="btn btn-sm" id="ic-sig-btn" title="Find signatures and watermarks on this image, to sign off (S)">Find Signatures</button>
                   <button class="btn btn-sm" id="ic-undo-btn" title="Undo (Ctrl+Z)">Undo</button>
                   <button class="btn btn-sm" id="ic-clear-mask-btn">Clear Mask</button>
                 </div>
@@ -163,7 +170,10 @@ class ImageCleanupTool {
               <div class="ic-stage" id="ic-stage">
                 <div class="ic-canvas" id="ic-canvas">
                   <img class="ic-img" id="ic-img" alt="">
+                  <canvas class="ic-work" id="ic-work"></canvas>
                   <canvas class="ic-mask" id="ic-mask"></canvas>
+                  <canvas class="ic-stroke" id="ic-stroke"></canvas>
+                  <div class="ic-finds" id="ic-finds"></div>
                   <div class="ic-box-preview" id="ic-box-preview" style="display:none"></div>
                 </div>
               </div>
@@ -176,6 +186,7 @@ class ImageCleanupTool {
                 </div>
               </div>
               <div class="ic-tries" id="ic-tries" style="display:none"></div>
+              <div class="ic-heal" id="ic-heal" style="display:none"></div>
             </div>
           </div>
         </div>
@@ -279,6 +290,7 @@ class ImageCleanupTool {
       if (button) this._setMode(button.dataset.mode);
     });
     this._setMode(this.mode);
+    this._healSetup();
 
     this.$('#ic-list').addEventListener('click', (e) => {
       const row = e.target.closest('[data-index]');
@@ -416,6 +428,7 @@ class ImageCleanupTool {
   async _show(index) {
     if (index < 0 || index >= this.items.length) return;
     this._flushMask();
+    if (this.current !== index) await this._healOnLeave(this.items[this.current]);
     const token = ++this.loadToken;
     this.current = index;
     this.undo = [];
@@ -434,6 +447,7 @@ class ImageCleanupTool {
       this.canvas.height = this.height;
       await this._loadMask(item);
       if (token !== this.loadToken) return;
+      this._healOnShow(item);
       this.tryUrls = item.tries.map(() => null);
       this.view = 'mask';
       this._fit();
@@ -480,7 +494,9 @@ class ImageCleanupTool {
   _renderList() {
     const list = this.$('#ic-list');
     list.innerHTML = this.items.map((item, i) => {
-      const label = item.status === 'working' && item.progress ? `${STATUS.working} ${item.progress.attempt}/${item.progress.attempts}` : STATUS[item.status];
+      const status = item.status === 'working' && item.progress ? `${STATUS.working} ${item.progress.attempt}/${item.progress.attempts}` : STATUS[item.status];
+      const note = this._healNote(item);
+      const label = note && !['working', 'queued'].includes(item.status) ? (item.status === 'none' ? note : `${status}, ${note.toLowerCase()}`) : status;
       return `<div class="ic-row${i === this.current ? ' active' : ''}" data-index="${i}" title="${escapeHtml(item.message || item.filePath)}">
         <div class="ic-row-name">${escapeHtml(item.name)}</div>
         <div class="ic-row-meta"><span class="ic-status-${item.status}">${escapeHtml(label)}</span></div>
@@ -498,16 +514,17 @@ class ImageCleanupTool {
     this.$('#ic-clean-one-btn').disabled = !this._canCleanCurrent();
     this.$('#ic-find-all-btn').disabled = Boolean(this.run) || !this.bubbleModel;
     this.$('#ic-stop-btn').style.display = this.run ? '' : 'none';
+    this._updateHealToolbar();
   }
 
   _cleanable(item) {
-    return item.status === 'marked' || item.status === 'error';
+    return (item.status === 'marked' || item.status === 'error') && !item.edits;
   }
 
   /** The image shown has a mask and nothing else is running; new tries replace any it has. */
   _canCleanCurrent() {
     const item = this.items[this.current];
-    return Boolean(item) && !this.run && ['marked', 'error', 'review', 'cleaned'].includes(item.status);
+    return Boolean(item) && !this.run && !item.edits && ['marked', 'error', 'review', 'cleaned'].includes(item.status);
   }
 
   async _cleanCurrent() {
@@ -525,12 +542,14 @@ class ImageCleanupTool {
 
     const editing = this.view === 'mask';
     this.$('#ic-mask').style.display = editing ? '' : 'none';
+    this.$('#ic-work').style.display = editing ? '' : 'none';
     this.$('#ic-img').src = editing ? this.imageUrl : (this.tryUrls[this.view] || this.imageUrl);
     this.$('#ic-canvas').classList.toggle('ic-viewing', !editing);
     this.$('#ic-tools').querySelectorAll('button, input').forEach(el => { el.disabled = !editing; });
     if (!this.bubbleModel) this.$('#ic-find-btn').disabled = true;
 
     this._renderWorking();
+    this._renderHeal();
     const tries = this.$('#ic-tries');
     if (!item.tries.length) {
       tries.style.display = 'none';
@@ -609,11 +628,18 @@ class ImageCleanupTool {
   }
 
   _snapshot() {
+    this.actions?.push('mask');
     this.undo.push(this.ctx.getImageData(0, 0, this.width, this.height));
     if (this.undo.length > UNDO_LIMIT) this.undo.shift();
   }
 
   _undo() {
+    if (this.actions?.[this.actions.length - 1] === 'heal') {
+      this.actions.pop();
+      this._healUndo();
+      return;
+    }
+    this.actions?.pop();
     const last = this.undo.pop();
     if (!last) return;
     this.ctx.putImageData(last, 0, 0);
@@ -647,6 +673,10 @@ class ImageCleanupTool {
       this._removeAreaAt(p);
       return;
     }
+    if (this.mode === 'heal') {
+      if (!this.healBusy) this._healPointerDown(e, p);
+      return;
+    }
     this.$('#ic-canvas').setPointerCapture(e.pointerId);
     this._snapshot();
     this.drag = { start: p, last: p };
@@ -654,6 +684,10 @@ class ImageCleanupTool {
   }
 
   _pointerMove(e) {
+    if (this.healDrag) {
+      this._healStrokeTo(this._point(e));
+      return;
+    }
     if (!this.drag) return;
     const p = this._point(e);
     if (this.mode === 'box') {
@@ -677,6 +711,10 @@ class ImageCleanupTool {
       this._renderEditor();
       return;
     }
+    if (this.healDrag) {
+      this._healPointerUp();
+      return;
+    }
     if (!this.drag) return;
     if (this.mode === 'box') {
       const box = this._boxFrom(this.drag.start, this._point(e));
@@ -686,6 +724,7 @@ class ImageCleanupTool {
         this.ctx.fillRect(box.x, box.y, box.w, box.h);
       } else {
         this.undo.pop();
+        this.actions?.pop();
       }
     }
     this.drag = null;
@@ -741,8 +780,7 @@ class ImageCleanupTool {
     const image = this.ctx.getImageData(0, 0, w, h);
     const d = image.data;
     if (x0 < 0 || y0 < 0 || x0 >= w || y0 >= h || !d[(y0 * w + x0) * 4 + 3]) return;
-    this.undo.push(this.ctx.getImageData(0, 0, w, h));
-    if (this.undo.length > UNDO_LIMIT) this.undo.shift();
+    this._snapshot();
     const stack = [y0 * w + x0];
     d[(y0 * w + x0) * 4 + 3] = 0;
     while (stack.length) {
@@ -1035,6 +1073,9 @@ class ImageCleanupTool {
       this.showToast('Stop the current run first', 'warning');
       return;
     }
+    const unsaved = this.items.filter(item => item.edits);
+    if (unsaved.length && !confirm(`Healing on ${unsaved.length} image${unsaved.length === 1 ? ' is' : 's are'} not saved. Clear anyway?`)) return;
+    unsaved.forEach(item => window.electronAPI.cleanup.healDiscard(item.filePath));
     this._flushMask();
     this._releaseUrls();
     this.items = [];
@@ -1057,14 +1098,25 @@ class ImageCleanupTool {
       this._undo();
       return;
     }
+    if ((e.ctrlKey || e.metaKey) && key === 's') {
+      e.preventDefault();
+      this._healSave(this.items[this.current]);
+      return;
+    }
     if (e.ctrlKey || e.metaKey || e.altKey) return;
-    const modes = { b: 'bubble', p: 'brush', e: 'erase', x: 'box', r: 'remove' };
+    if (key === 'o' && this.view === 'mask') {
+      this._comparing(true);
+      e.preventDefault();
+      return;
+    }
+    const modes = { b: 'bubble', p: 'brush', e: 'erase', x: 'box', r: 'remove', h: 'heal' };
     if (modes[key] && this.view === 'mask') this._setMode(modes[key]);
     else if (key === '[' || key === ']') {
       this.settings.brush = Math.min(200, Math.max(4, this.settings.brush + (key === ']' ? 6 : -6)));
       this.$('#ic-brush').value = this.settings.brush;
       this._saveSettings();
     } else if (key === 'f') this._findCurrent();
+    else if (key === 's') this._findSignatures(this.items[this.current]);
     else if (key === 'c') this._cleanCurrent();
     else if (key === 'arrowdown' || key === 'pagedown') this._show(this.current + 1);
     else if (key === 'arrowup' || key === 'pageup') this._show(this.current - 1);
@@ -1087,6 +1139,8 @@ class ImageCleanupTool {
 }
 
 console.log('✅ ImageCleanupTool module loaded');
+
+window.mixMethods(ImageCleanupTool, ImageCleanupHealing);
 
 export default ImageCleanupTool;
 window.ImageCleanupTool = ImageCleanupTool;

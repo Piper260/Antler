@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signature Bench</title>
+<style>
+  :root {
+    --bg: #f4f4f2; --panel: #ffffff; --text: #1d1f1c; --muted: #6b6f68; --line: #d9dbd5;
+    --accent: #3b6e4f; --find: #1f9d55; --truth: #d48a00; --text-box: #2f6fd6; --bad: #c43d3d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #171816; --panel: #212320; --text: #e6e8e3; --muted: #9a9e96; --line: #353833;
+      --accent: #7fb08f; --find: #3ccf7c; --truth: #f0b030; --text-box: #6aa0ff; --bad: #ff6b6b; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, "Segoe UI", sans-serif; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--panel); border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+  h1 { font-size: 16px; margin: 0; }
+  select, button { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 4px 9px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  label { display: inline-flex; gap: 5px; align-items: center; color: var(--muted); }
+  .metrics { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--muted); }
+  .metrics b { color: var(--text); font-weight: 600; }
+  .runs { padding: 0 16px; }
+  .runs table { border-collapse: collapse; width: 100%; background: var(--panel); border: 1px solid var(--line); margin: 10px 0; font-size: 13px; }
+  .runs th, .runs td { border-bottom: 1px solid var(--line); padding: 4px 8px; text-align: left; white-space: nowrap; }
+  .runs td.wrap { white-space: normal; }
+  .runs tr.current td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  main { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card, 380px), 1fr)); gap: 14px; padding: 14px 16px 40px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; }
+  .card.s-perfect { border-color: var(--find); }
+  .card.s-miss, .card.s-wrong { border-color: var(--bad); }
+  .stage { position: relative; background: #000; cursor: crosshair; user-select: none; }
+  .stage img { display: block; width: 100%; height: auto; }
+  .stage canvas, .stage svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .stage canvas { pointer-events: none; opacity: .55; image-rendering: pixelated; }
+  svg rect { fill: transparent; vector-effect: non-scaling-stroke; }
+  svg .find { stroke: var(--find); stroke-width: 2; cursor: pointer; }
+  svg .find.ok { fill: color-mix(in srgb, var(--find) 22%, transparent); }
+  svg .truth { stroke: var(--truth); stroke-width: 2; stroke-dasharray: 5 3; cursor: context-menu; }
+  svg .lettering { stroke: var(--text-box); stroke-width: 1; stroke-dasharray: 2 2; pointer-events: none; }
+  svg .drawing { stroke: var(--truth); stroke-width: 2; pointer-events: none; }
+  svg text { font: 600 13px system-ui; fill: var(--find); paint-order: stroke; stroke: #000; stroke-width: 3px; pointer-events: none; }
+  .info { padding: 8px 10px; display: grid; gap: 4px; font-size: 13px; }
+  .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .facts { color: var(--muted); display: flex; flex-wrap: wrap; gap: 2px 12px; }
+  .finds { color: var(--muted); font-size: 12px; }
+  .state { font-weight: 600; }
+  .state.bad { color: var(--bad); }
+  .state.good { color: var(--find); }
+  .actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 10px 10px; }
+  .empty { padding: 40px; color: var(--muted); }
+  .help { color: var(--muted); font-size: 13px; padding: 8px 16px 0; }
+  .help span { white-space: nowrap; }
+  .key { display: inline-block; width: 12px; height: 12px; border: 2px solid; vertical-align: -1px; margin-right: 3px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Signature Bench</h1>
+  <label>Run <select id="run"></select></label>
+  <label>Show <select id="filter">
+    <option value="all">All images</option>
+    <option value="unreviewed">Not reviewed</option>
+    <option value="tagged">Tagged signature/watermark</option>
+    <option value="untagged">Not tagged</option>
+    <option value="found">With finds</option>
+    <option value="problems">Misses or wrong finds</option>
+  </select></label>
+  <label><input type="checkbox" id="show-lettering"> Lettering boxes</label>
+  <label>Heatmap <select id="heat"><option value="">None</option><option value="signature">signature</option><option value="watermark">watermark</option></select></label>
+  <label>Size <select id="size"><option value="300px">Small</option><option value="380px" selected>Medium</option><option value="560px">Large</option></select></label>
+  <button id="toggle-runs">Compare runs</button>
+  <div class="metrics" id="metrics"></div>
+</header>
+<div class="help">
+  <span><i class="key" style="border-color:var(--find)"></i>a find: click it if it's right</span> ·
+  <span><i class="key" style="border-color:var(--truth);border-style:dashed"></i>what you marked: drag on the image to box a missed signature, right-click a box to remove it</span> ·
+  <span>then <b>Done</b>, or <b>No signature</b></span>
+</div>
+<div class="runs" id="runs" hidden></div>
+<main id="cards"><div class="empty">Loading…</div></main>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const state = { run: null, runs: [], truth: {}, score: null };
+const prefs = (() => { try { return JSON.parse(localStorage.getItem('sigbench') || '{}'); } catch { return {}; } })();
+const savePrefs = () => { try { localStorage.setItem('sigbench', JSON.stringify(prefs)); } catch {} };
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pct = (v) => (v == null ? '–' : `${v}%`);
+
+const inter = (a, b) => {
+  const x = Math.max(a.x, b.x), y = Math.max(a.y, b.y);
+  const w = Math.min(a.x + a.w, b.x + b.w) - x, h = Math.min(a.y + a.h, b.y + b.h) - y;
+  return w > 0 && h > 0 ? w * h : 0;
+};
+const matches = (a, b) => inter(a, b) / Math.min(a.w * a.h, b.w * b.h) >= 0.25;
+
+async function load(id) {
+  const res = await fetch(`/api/run${id ? `?id=${encodeURIComponent(id)}` : ''}`);
+  if (!res.ok) {
+    $('#cards').innerHTML = '<div class="empty">No runs yet. Run <code>npm run bench:signatures</code>.</div>';
+    return;
+  }
+  const data = await res.json();
+  state.run = data;
+  state.truth = data.truth;
+  state.score = data.score;
+  state.runs = await (await fetch('/api/runs')).json();
+  renderRuns();
+  renderMetrics();
+  renderCards();
+}
+
+async function rescore() {
+  const data = await (await fetch(`/api/run?id=${encodeURIComponent(state.run.id)}`)).json();
+  state.truth = data.truth;
+  state.score = data.score;
+  renderMetrics();
+}
+
+function renderMetrics() {
+  const s = state.score;
+  $('#metrics').innerHTML = `
+    <span>Reviewed <b>${s.reviewed}</b>/${state.run.images.length}</span>
+    <span>Found <b>${s.found}/${s.truth}</b> (${pct(s.recall)})</span>
+    <span>Fully covered <b>${pct(s.coverRate)}</b></span>
+    <span>Finds right <b>${s.right}/${s.finds}</b> (${pct(s.precision)})</span>
+    <span>Perfect images <b>${pct(s.perfectRate)}</b></span>
+    <span title="Unreviewed too; e621 tags miss many signatures">Tagged with a find <b>${pct(s.tags.taggedHitRate)}</b>, untagged flagged <b>${pct(s.tags.untaggedFlagRate)}</b></span>`;
+}
+
+function renderRuns() {
+  const select = $('#run');
+  select.innerHTML = [...state.runs].reverse().map(r => `<option value="${esc(r.id)}"${r.id === state.run.id ? ' selected' : ''}>${esc(r.id)}${r.label ? ` · ${esc(r.label)}` : ''}</option>`).join('');
+  $('#runs').innerHTML = `<table><thead><tr><th>Run</th><th>Label</th><th>Settings</th><th>Reviewed</th><th>Found</th><th>Covered</th><th>Right</th><th>Perfect</th><th>Tagged hit</th><th>Untagged flagged</th></tr></thead><tbody>
+    ${[...state.runs].reverse().map(r => { const s = r.summary; return `<tr class="${r.id === state.run.id ? 'current' : ''}">
+      <td>${esc(r.id)}</td><td class="wrap">${esc(r.label)}</td><td class="wrap">${esc(Object.keys(r.options || {}).length ? JSON.stringify(r.options) : '')}</td>
+      <td>${s.reviewed}</td><td>${s.found}/${s.truth} (${pct(s.recall)})</td><td>${pct(s.coverRate)}</td><td>${s.right}/${s.finds} (${pct(s.precision)})</td>
+      <td>${pct(s.perfectRate)}</td><td>${pct(s.tags.taggedHitRate)}</td><td>${pct(s.tags.untaggedFlagRate)}</td></tr>`; }).join('')}
+  </tbody></table><p class="help">Scores in this table are from when each run was made; the bar above rescores the run shown against your latest marks.</p>`;
+}
+
+function imageState(image) {
+  const t = state.truth[image.path];
+  if (!t?.reviewed) return { cls: '', text: 'Not reviewed' };
+  const boxes = t.boxes || [];
+  const missed = boxes.filter(b => !image.candidates.some(c => matches(c, b))).length;
+  const wrong = image.candidates.filter(c => !boxes.some(b => matches(c, b))).length;
+  if (!missed && !wrong) return { cls: 's-perfect', text: boxes.length ? 'Right' : 'Right: nothing to find', good: true };
+  return { cls: missed ? 's-miss' : 's-wrong', text: [missed && `${missed} missed`, wrong && `${wrong} wrong`].filter(Boolean).join(', '), bad: true };
+}
+
+function visible(image) {
+  const f = $('#filter').value;
+  const t = state.truth[image.path];
+  if (f === 'unreviewed') return !t?.reviewed;
+  if (f === 'tagged') return image.tagged;
+  if (f === 'untagged') return !image.tagged;
+  if (f === 'found') return image.candidates.length > 0;
+  if (f === 'problems') return Boolean(imageState(image).bad);
+  return true;
+}
+
+function renderCards() {
+  const cards = $('#cards');
+  const list = state.run.images.filter(i => !i.error && i.preview).filter(visible);
+  cards.innerHTML = list.length ? '' : '<div class="empty">No images match.</div>';
+  for (const image of list) cards.appendChild(card(image));
+}
+
+function card(image) {
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.innerHTML = `
+    <div class="stage"><img src="/images/${image.preview.key}.jpg" alt="" loading="lazy"><canvas></canvas><svg viewBox="0 0 ${image.width} ${image.height}" preserveAspectRatio="none"></svg></div>
+    <div class="info">
+      <div class="name" title="${esc(image.path)}">${esc(image.folder)} / ${esc(image.path.split(/[\\/]/).pop())}</div>
+      <div class="facts">
+        <span>Hydra: signature ${image.raw?.probs?.signature ?? '–'}, watermark ${image.raw?.probs?.watermark ?? '–'}</span>
+        <span>${image.tagged ? 'Tagged' : 'Not tagged'} on e621</span>
+        <span>${image.width}×${image.height}</span><span>${image.ms ?? '–'} ms</span>
+      </div>
+      <div class="finds"></div>
+      <div class="state"></div>
+    </div>
+    <div class="actions">
+      <button class="primary" data-act="done">Done</button>
+      <button data-act="none">No signature</button>
+      <button data-act="all">All finds right</button>
+      <button data-act="reset">Start over</button>
+    </div>`;
+  const svg = el.querySelector('svg');
+  const update = () => {
+    const t = state.truth[image.path] || { reviewed: false, boxes: [] };
+    const st = imageState(image);
+    el.className = `card ${st.cls}`;
+    const stEl = el.querySelector('.state');
+    stEl.textContent = st.text;
+    stEl.className = `state${st.bad ? ' bad' : st.good ? ' good' : ''}`;
+    el.querySelector('.finds').innerHTML = image.candidates.length
+      ? image.candidates.map((c, n) => `${n + 1}: ${c.kind} ${c.score} <span title="${esc(JSON.stringify(c.why))}">(${Object.entries(c.why).map(([k, v]) => `${k} ${typeof v === 'number' ? v.toFixed(2) : v}`).join(', ')})</span>`).join('<br>')
+      : 'No finds';
+    const lettering = $('#show-lettering').checked ? (image.raw?.texts || []).map(b => `<rect class="lettering" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}"><title>${b.label} ${b.score}</title></rect>`).join('') : '';
+    const truthBoxes = (t.boxes || []).map((b, n) => `<rect class="truth" data-truth="${n}" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}"></rect>`).join('');
+    const finds = image.candidates.map((c, n) => {
+      const ok = (t.boxes || []).some(b => matches(c, b));
+      return `<rect class="find${ok ? ' ok' : ''}" data-find="${n}" x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}"></rect><text x="${c.x + 3}" y="${c.y - 4 > 12 ? c.y - 4 : c.y + 15}">${n + 1}</text>`;
+    }).join('');
+    svg.innerHTML = lettering + finds + truthBoxes;
+    drawHeat(el.querySelector('canvas'), image);
+  };
+
+  const save = async (patch) => {
+    const t = { reviewed: false, boxes: [], ...(state.truth[image.path] || {}), ...patch };
+    state.truth[image.path] = t;
+    update();
+    await fetch('/api/truth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: image.path, ...t }) });
+    rescore();
+  };
+  const boxes = () => [...(state.truth[image.path]?.boxes || [])];
+
+  // Click a find: it's right (becomes a marked box), or click again to take it back.
+  svg.addEventListener('click', (e) => {
+    const n = e.target.dataset?.find;
+    if (n === undefined || drag?.moved) return;
+    const c = image.candidates[Number(n)];
+    const list = boxes();
+    const hit = list.findIndex(b => matches(c, b));
+    if (hit >= 0) list.splice(hit, 1);
+    else list.push({ x: c.x, y: c.y, w: c.w, h: c.h });
+    save({ boxes: list });
+  });
+  svg.addEventListener('contextmenu', (e) => {
+    const n = e.target.dataset?.truth;
+    if (n === undefined) return;
+    e.preventDefault();
+    const list = boxes();
+    list.splice(Number(n), 1);
+    save({ boxes: list });
+  });
+
+  // Drag to box a missed signature.
+  let drag = null;
+  const point = (e) => {
+    const r = svg.getBoundingClientRect();
+    return { x: (e.clientX - r.left) / r.width * image.width, y: (e.clientY - r.top) / r.height * image.height };
+  };
+  svg.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || e.target.dataset?.find !== undefined) return;
+    drag = { start: point(e), moved: false };
+    svg.setPointerCapture(e.pointerId);
+  });
+  svg.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const p = point(e);
+    const b = { x: Math.min(drag.start.x, p.x), y: Math.min(drag.start.y, p.y), w: Math.abs(p.x - drag.start.x), h: Math.abs(p.y - drag.start.y) };
+    drag.moved = b.w > 4 || b.h > 4;
+    let r = svg.querySelector('.drawing');
+    if (!r) {
+      r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      r.setAttribute('class', 'drawing');
+      svg.appendChild(r);
+    }
+    r.setAttribute('x', b.x); r.setAttribute('y', b.y); r.setAttribute('width', b.w); r.setAttribute('height', b.h);
+    drag.box = b;
+  });
+  svg.addEventListener('pointerup', () => {
+    const d = drag;
+    drag = null;
+    svg.querySelector('.drawing')?.remove();
+    if (d?.moved && d.box.w > 3 && d.box.h > 3) save({ boxes: [...boxes(), d.box] });
+  });
+
+  el.querySelector('.actions').addEventListener('click', (e) => {
+    const act = e.target.dataset?.act;
+    if (act === 'done') save({ reviewed: true });
+    else if (act === 'none') save({ reviewed: true, boxes: [] });
+    else if (act === 'all') save({ reviewed: true, boxes: image.candidates.map(({ x, y, w, h }) => ({ x, y, w, h })) });
+    else if (act === 'reset') save({ reviewed: false, boxes: [] });
+  });
+
+  update();
+  return el;
+}
+
+function drawHeat(canvas, image) {
+  const tag = $('#heat').value;
+  const cam = tag && image.raw?.cams?.[tag];
+  if (!cam) {
+    canvas.width = canvas.height = 1;
+    canvas.getContext('2d').clearRect(0, 0, 1, 1);
+    return;
+  }
+  const { rows, cols } = cam.grid;
+  canvas.width = cols;
+  canvas.height = rows;
+  const ctx = canvas.getContext('2d');
+  const px = ctx.createImageData(cols, rows);
+  const max = Math.max(1e-6, ...cam.values);
+  cam.values.forEach((v, i) => {
+    const a = Math.max(0, v / max);
+    px.data.set([255, 60, 30, Math.round(a * 230)], i * 4);
+  });
+  ctx.putImageData(px, 0, 0);
+}
+
+$('#run').addEventListener('change', (e) => load(e.target.value));
+$('#filter').addEventListener('change', () => { prefs.filter = $('#filter').value; savePrefs(); renderCards(); });
+$('#show-lettering').addEventListener('change', () => { prefs.lettering = $('#show-lettering').checked; savePrefs(); renderCards(); });
+$('#heat').addEventListener('change', () => { prefs.heat = $('#heat').value; savePrefs(); renderCards(); });
+$('#size').addEventListener('change', () => { prefs.size = $('#size').value; savePrefs(); document.body.style.setProperty('--card', prefs.size); });
+$('#toggle-runs').addEventListener('click', () => { $('#runs').hidden = !$('#runs').hidden; });
+if (prefs.filter) $('#filter').value = prefs.filter;
+if (prefs.lettering) $('#show-lettering').checked = true;
+if (prefs.heat) $('#heat').value = prefs.heat;
+if (prefs.size) { $('#size').value = prefs.size; document.body.style.setProperty('--card', prefs.size); }
+load();
+</script>
+</body>
+</html>

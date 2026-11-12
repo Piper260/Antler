@@ -18,7 +18,10 @@
     "lint:fix": "eslint src/ config/ --fix",
     "clean": "rimraf dist build logs/*.log",
     "models:manifest": "node scripts/model-manifest.js",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "bench:signatures": "electron scripts/signature-bench/main.js",
+    "bench:signatures:report": "node scripts/signature-bench/serve.js",
+    "bench:signatures:rescore": "node scripts/signature-bench/rescore.js"
   },
   "keywords": [
     "electron",

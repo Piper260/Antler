@@ -6,6 +6,7 @@ const ComicVisionService = require('../services/ComicVisionService');
 const comfy = require('../services/comfyCleanup');
 const { paint } = require('../services/bubbleMask');
 const { findModelFile } = require('../utils/modelPaths');
+const { findTagger } = require('../utils/taggers');
 const { IMAGE_EXTENSIONS, requireFile } = require('../utils/pathGuard');
 const { writeFileSafe } = require('../utils/safeWrite');
 
@@ -141,6 +142,43 @@ class CleanupIPC {
       } finally {
         this.runs.delete(filePath);
       }
+    });
+
+    // Signatures and watermarks, each with the ink to heal (services/signatureFind.js).
+    handle('cleanup:find-signatures', async (event, filePath) => {
+      requireFile(filePath, IMAGE_EXTENSIONS, 'image');
+      const modelPath = findModelFile(BUBBLE_MODEL_FILE);
+      if (!modelPath) throw new Error('The text model (resources/models/comic/comic-bubbles.onnx) was not found');
+      const { width, height, candidates } = await this.vision.run('signatures', { inputPath: filePath, modelPath, tagger: findTagger({ kinds: ['hydra'] }) });
+      return { width, height, finds: candidates };
+    });
+
+    // Adds areas (signature finds better repaired by Flux) to the image's saved mask.
+    handle('cleanup:mark-regions', async (event, filePath, list) => {
+      requireFile(filePath, IMAGE_EXTENSIONS, 'image');
+      if (!Array.isArray(list) || !list.length) throw new Error('Nothing to mark');
+      const { width, height } = await this._size(filePath);
+      const regions = list.slice(0, 50).map(region);
+      const mask = (await this._readMask(filePath, width, height)) || new Uint8Array(width * height);
+      await this._writeMask(filePath, paint(mask, width, regions), width, height);
+      return { marked: true };
+    });
+
+    // Spot healing: heal, undo, save or discard the image's working copy.
+    const region = (r) => {
+      const w = Math.round(Number(r?.w));
+      const h = Math.round(Number(r?.h));
+      if (!(w > 0 && h > 0) || w * h > 64 * 1024 * 1024 || !r.mask || r.mask.length !== w * h) throw new Error('Invalid area');
+      return { x: Math.round(Number(r.x) || 0), y: Math.round(Number(r.y) || 0), w, h, mask: Uint8Array.from(r.mask) };
+    };
+    handle('cleanup:heal', async (event, filePath, area, options = {}) =>
+      this.vision.run('heal', { inputPath: requireFile(filePath, IMAGE_EXTENSIONS, 'image'), region: region(area), seed: Number(options.seed) || 1 }));
+    handle('cleanup:heal-undo', async (event, filePath) => this.vision.run('heal-undo', { inputPath: requireFile(filePath, IMAGE_EXTENSIONS, 'image') }));
+    handle('cleanup:heal-save', async (event, filePath) => this.vision.run('heal-save', { inputPath: requireFile(filePath, IMAGE_EXTENSIONS, 'image') }));
+    handle('cleanup:heal-discard', async (event, filePath) => this.vision.run('heal-discard', { inputPath: requireFile(filePath, IMAGE_EXTENSIONS, 'image') }));
+    handle('cleanup:heal-state', async (event, filePaths) => {
+      if (!Array.isArray(filePaths)) throw new Error('Invalid file list');
+      return { edits: await this.vision.run('heal-state', { inputPaths: filePaths.slice(0, 20000) }) };
     });
 
     handle('cleanup:stop', async () => {

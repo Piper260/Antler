@@ -20,3 +20,6 @@ resources/models/tagger/
 resources/models/comic/
 resources/models/*.onnx
 *.part
+
+# Signature bench output (scripts/signature-bench): your marks, runs and image copies
+bench/

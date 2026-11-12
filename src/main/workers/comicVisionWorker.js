@@ -19,6 +19,9 @@
  *        { id, type: 'bubble-at', inputPath, x, y, margin? }
  *        { id, type: 'hydra-tags', inputPath, tags, hidden?, all?, tagger }
  *        { id, type: 'hydra-heatmap', inputPath, tag, tagger }
+ *        { id, type: 'signatures', inputPath, modelPath, tagger?, debug?, options? }
+ *        { id, type: 'heal', inputPath, region, seed? }, 'heal-undo' | 'heal-save' | 'heal-discard' { inputPath },
+ *        { id, type: 'heal-state', inputPaths }
  *
  * 'hydra-tags' and 'hydra-heatmap' serve the Tag Editor: Hydra's score for
  * each of an image's tags with the confident tags it lacks
@@ -54,6 +57,8 @@ const { parseVocabulary, parseTagFile, formatTagFile, panelTagFacts, mergePanelT
 const { findPanelImage, freePanelName } = require('../services/panelFiles');
 const { grow, boxRegion, bubbleInBox, bubbleAt } = require('../services/bubbleMask');
 const { PATCH, prepareHydraImage } = require('../services/hydraImage');
+const { findSignatures, inkRegion } = require('../services/signatureFind');
+const { HealSessions } = require('../services/healSessions');
 const { reviewImageTags } = require('../services/hydraReview');
 
 // Pages are analysed at this long edge at most; gutters survive the shrink
@@ -447,6 +452,8 @@ const BUBBLE_SIZE = 640;
 const BUBBLE_THRESHOLD = 0.5;
 const BUBBLE_LABELS = ['bubble', 'text_bubble', 'text_free'];
 const DEFAULT_MARGIN = 8;
+// Signatures are faint lettering; the text model is asked for weaker boxes.
+const SIGNATURE_TEXT_FLOOR = 0.15;
 
 /** The image's RGB pixels, as shown on screen (EXIF rotation applied); kept for the next click. */
 async function cleanupImage(inputPath) {
@@ -469,8 +476,8 @@ async function getBubbleModel(modelPath) {
 
 const inside = (inner, outer) => inner[0] >= outer[0] - 4 && inner[1] >= outer[1] - 4 && inner[2] <= outer[2] + 4 && inner[3] <= outer[3] + 4;
 
-async function findBubbles({ inputPath, modelPath, freeText = false, margin = DEFAULT_MARGIN }) {
-  const img = await cleanupImage(inputPath);
+/** The text model's boxes at or above a score, in image pixels. */
+async function textModelBoxes(img, modelPath, threshold) {
   const { session, ort } = await getBubbleModel(modelPath);
   const resized = await sharp(img.data, { raw: { width: img.width, height: img.height, channels: 3 } })
     .resize(BUBBLE_SIZE, BUBBLE_SIZE, { fit: 'fill', kernel: sharp.kernel.cubic })
@@ -490,9 +497,15 @@ async function findBubbles({ inputPath, modelPath, freeText = false, margin = DE
   const found = [];
   const scores = result.scores.data;
   for (let i = 0; i < scores.length; i++) {
-    if (scores[i] < BUBBLE_THRESHOLD) continue;
+    if (scores[i] < threshold) continue;
     found.push({ label: BUBBLE_LABELS[Number(result.labels.data[i])], score: scores[i], box: Array.from(result.boxes.data.slice(i * 4, i * 4 + 4)) });
   }
+  return found;
+}
+
+async function findBubbles({ inputPath, modelPath, freeText = false, margin = DEFAULT_MARGIN }) {
+  const img = await cleanupImage(inputPath);
+  const found = await textModelBoxes(img, modelPath, BUBBLE_THRESHOLD);
 
   const bubbles = found.filter(item => item.label === 'bubble');
   const regions = [];
@@ -512,6 +525,45 @@ async function regionAt({ inputPath, x, y, margin = DEFAULT_MARGIN }) {
   const region = bubbleAt(img, Number(x), Number(y));
   return { width: img.width, height: img.height, region: region && grow(region, margin, img.width, img.height) };
 }
+
+/**
+ * Signatures and watermarks (services/signatureFind.js): Hydra's heatmaps
+ * for the two tags and the text model's lettering boxes. Hydra is optional;
+ * without it only the lettering boxes are used. With `debug`, the raw
+ * model output comes back too (the signature bench draws it).
+ */
+async function findSignatureBoxes({ inputPath, modelPath, tagger: taggerFiles, debug = false, options = {} }) {
+  const img = await cleanupImage(inputPath);
+  const texts = (await textModelBoxes(img, modelPath, SIGNATURE_TEXT_FLOOR)).map(({ label, score, box }) => {
+    const [x0, y0, x1, y1] = box.map(Math.round);
+    return { label, score: Math.round(score * 100) / 100, x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  });
+  const probs = {};
+  const cams = {};
+  if (taggerFiles?.camPath) {
+    const { probs: all } = await hydraFor(inputPath, taggerFiles);
+    for (const tag of ['signature', 'watermark']) {
+      const index = tagger.vocabulary.index.get(tag);
+      if (index === undefined) continue;
+      probs[tag] = Math.round(all[index] * 1000) / 1000;
+      cams[tag] = await hydraHeatmap({ inputPath, tag, tagger: taggerFiles });
+    }
+  }
+  const candidates = findSignatures({ width: img.width, height: img.height, probs, cams, texts }, options)
+    .map(c => ({ ...c, region: debug ? undefined : inkRegion(img, c) }));
+  return { width: img.width, height: img.height, candidates, ...(debug ? { debug: { probs, texts, cams } } : {}) };
+}
+
+// Spot healing (services/healSessions.js): a working copy per image until saved.
+const healing = new HealSessions(cleanupImage);
+const healJob = ({ inputPath, region, seed }) => healing.heal(inputPath, region, { seed });
+const healUndo = ({ inputPath }) => healing.undo(inputPath);
+const healSave = ({ inputPath }) => healing.save(inputPath);
+const healDiscard = ({ inputPath }) => {
+  healing.discard(inputPath);
+  return { edits: 0 };
+};
+const healState = ({ inputPaths }) => Object.fromEntries((inputPaths || []).map(p => [p, healing.edits(p)]));
 
 // ------------------------------------------------------- Tag Editor (Hydra)
 
@@ -573,7 +625,8 @@ async function hydraHeatmap({ inputPath, tag, tagger: taggerFiles }) {
 
 const HANDLERS = {
   detect, export: exportPanels, tags: previewTags, thumbs: panelThumbs, bubbles: findBubbles, 'bubble-at': regionAt,
-  'hydra-tags': hydraTags, 'hydra-heatmap': hydraHeatmap
+  'hydra-tags': hydraTags, 'hydra-heatmap': hydraHeatmap, signatures: findSignatureBoxes,
+  heal: healJob, 'heal-undo': healUndo, 'heal-save': healSave, 'heal-discard': healDiscard, 'heal-state': healState
 };
 
 process.parentPort.on('message', ({ data: job }) => {

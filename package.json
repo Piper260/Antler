@@ -16,7 +16,7 @@
     "test": "jest",
     "lint": "eslint src/ config/",
     "lint:fix": "eslint src/ config/ --fix",
-    "clean": "rimraf dist build logs/*.log",
+    "clean": "node -e \"for (const d of ['dist', 'build']) require('fs').rmSync(d, { recursive: true, force: true }); for (const f of require('fs').readdirSync('logs', { withFileTypes: true })) if (f.isFile() && f.name.endsWith('.log')) require('fs').rmSync('logs/' + f.name)\"",
     "models:manifest": "node scripts/model-manifest.js",
     "postinstall": "electron-builder install-app-deps",
     "bench:signatures": "electron scripts/signature-bench/main.js",
@@ -64,8 +64,7 @@
     "electron-builder": "26.17.0",
     "electron-reload": "^2.0.0-alpha.1",
     "eslint": "^8.54.0",
-    "jest": "^29.7.0",
-    "rimraf": "^5.0.5"
+    "jest": "^29.7.0"
   },
   "build": {
     "appId": "com.piper.aio",
@@ -241,6 +240,17 @@
         "error",
         "single"
       ]
+    }
+  },
+  "overrides": {
+    "app-builder-lib": {
+      "minimatch": "^11.0.1"
+    },
+    "@electron/universal": {
+      "minimatch": "^11.0.1",
+      "dir-compare": {
+        "minimatch": "^3.1.2"
+      }
     }
   }
 }

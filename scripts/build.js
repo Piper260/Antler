@@ -329,8 +329,34 @@ async function verifyOutput(buildType, startedAt, update) {
 
 /* ---------- main ---------- */
 
+/**
+ * Stamps the commit being built into the app (src/shared/build-info.json,
+ * not in git), so an installed copy, which has no .git folder, can say
+ * which commit it is. On CI the tag comes from the release ref.
+ */
+function stampBuildInfo() {
+  const git = (command) => {
+    try {
+      return require('child_process').execSync(command, { cwd: ROOT, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
+    } catch {
+      return null;
+    }
+  };
+  const ref = process.env.GITHUB_REF_TYPE === 'tag' ? process.env.GITHUB_REF_NAME : null;
+  const info = {
+    commit: git('git rev-parse --short HEAD'),
+    branch: process.env.GITHUB_REF_TYPE === 'branch' ? process.env.GITHUB_REF_NAME : git('git rev-parse --abbrev-ref HEAD'),
+    tag: ref || git('git describe --tags --exact-match HEAD'),
+    dirty: Boolean(git('git status --porcelain')),
+    date: new Date().toISOString()
+  };
+  fs.writeFileSync(path.join(ROOT, 'src', 'shared', 'build-info.json'), JSON.stringify(info, null, 2));
+  return info;
+}
+
 async function build(buildType) {
   const kind = buildType === 'dir' ? 'portable folder' : 'installer';
+  stampBuildInfo();
   process.stdout.write(`  ${c.bone('Building the')} ${c.bold(c.moss(`${PLATFORM.name} ${kind}`))}${c.bark(buildType === 'dir'
     ? ' with every model, for your own use'
     : ', models download on first launch')}\n\n`);

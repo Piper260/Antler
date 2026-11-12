@@ -8,6 +8,18 @@ const fs = require('fs');
 // started from could report some other repository's history.
 const REPO_ROOT = path.join(__dirname, '..', '..');
 const HAS_REPO = fs.existsSync(path.join(REPO_ROOT, '.git'));
+// An installed copy has no .git folder; the build stamps its commit here
+// instead (scripts/build.js). Not in git.
+const BUILD_INFO_PATH = path.join(__dirname, 'build-info.json');
+
+function readBuildInfo() {
+  if (HAS_REPO) return null;
+  try {
+    return JSON.parse(fs.readFileSync(BUILD_INFO_PATH, 'utf8'));
+  } catch {
+    return null;
+  }
+}
 
 function git(command) {
   if (!HAS_REPO) throw new Error('not a source checkout');
@@ -17,11 +29,21 @@ function git(command) {
 class VersionInfo {
   constructor() {
     this.packageVersion = this.getPackageVersion();
-    this.gitCommit = this.getGitCommit();
-    this.gitBranch = this.getGitBranch();
-    this.gitTag = this.getGitTag();
-    this.isDirty = this.isGitDirty();
-    this.buildDate = new Date().toISOString();
+    const stamped = readBuildInfo();
+    this.installed = !HAS_REPO;
+    if (stamped) {
+      this.gitCommit = stamped.commit || 'unknown';
+      this.gitBranch = stamped.branch || 'unknown';
+      this.gitTag = stamped.tag || null;
+      this.isDirty = Boolean(stamped.dirty);
+      this.buildDate = stamped.date || new Date().toISOString();
+    } else {
+      this.gitCommit = this.getGitCommit();
+      this.gitBranch = this.getGitBranch();
+      this.gitTag = this.getGitTag();
+      this.isDirty = this.isGitDirty();
+      this.buildDate = new Date().toISOString();
+    }
   }
 
   /**
@@ -131,6 +153,10 @@ class VersionInfo {
    * Format: abc123 or abc123*
    */
   getDisplayVersion() {
+    // An installed copy: its version, and the commit it was built from when known.
+    if (this.installed) {
+      return `v${this.packageVersion}${this.gitCommit !== 'unknown' ? ` (${this.gitCommit})` : ''}`;
+    }
     let version = this.gitCommit !== 'unknown' ? this.gitCommit : 'unknown';
     
     if (this.isDirty) {

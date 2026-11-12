@@ -23,3 +23,6 @@ resources/models/*.onnx
 
 # Signature bench output (scripts/signature-bench): your marks, runs and image copies
 bench/
+
+# Commit stamp written by scripts/build.js for installed copies
+src/shared/build-info.json

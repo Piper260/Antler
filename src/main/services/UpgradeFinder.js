@@ -9,6 +9,10 @@
  * person to answer (same / variant / different); answers are kept so a pair
  * is never asked twice, and they tune the automatic cut-off.
  *
+ * It also finds the creator's work that isn't on e621 at all: Pawchive
+ * images that match none of the artist's e621 posts (every one, fetched for
+ * the run, not just the ones the search loaded), so they can be downloaded.
+ *
  * Kept in <user data>/pawchive-upgrades.json:
  *   links      e621 artist name -> Pawchive creator { service, id, name }
  *   decisions  "<e621 id>|<pawchive file hash>" -> { answer, distance, at }
@@ -18,7 +22,7 @@ const fs = require('fs');
 const path = require('path');
 const { writeFileSafe } = require('../utils/safeWrite');
 const match = require('./imageMatch');
-const { postImages, fileHash, fileUrl, thumbUrl, PAGE_SIZE } = require('./PawchiveService');
+const { postImages, fileHash, fileUrl, thumbUrl, formatPost, PAGE_SIZE } = require('./PawchiveService');
 
 const DEFAULT_PAGES = 10;    // newest 500 Pawchive posts
 const MAX_PAGES = 40;
@@ -70,9 +74,48 @@ function pairUp(originals, candidates, decisions = {}) {
   return pairs;
 }
 
+/**
+ * Pawchive images that match none of the e621 fingerprints, each image once
+ * (one posted in two tiers is the same picture). Pure: fingerprints only.
+ * @param candidates [{ hash, fingerprint }]
+ * @param prints     e621 fingerprints
+ * @returns candidates not within match.LOOSE of any e621 print
+ */
+function notOnE621(candidates, prints) {
+  const missing = [];
+  for (const c of candidates) {
+    if (prints.some(p => match.hamming(c.fingerprint, p) <= match.LOOSE)) continue;
+    if (missing.some(m => match.hamming(c.fingerprint, m.fingerprint) <= match.DEFAULT_SURE)) continue;
+    missing.push(c);
+  }
+  return missing;
+}
+
+/** A Pawchive image as a post the search grid can show and download. */
+function postForImage(candidate, creatorName) {
+  const post = formatPost(candidate.raw, creatorName);
+  if (!post) return null;
+  const id = `${post.id}_${candidate.hash.slice(0, 8)}`;
+  const fileType = extOfUrl(candidate.url) || post.metadata.fileType;
+  return {
+    ...post,
+    id,
+    onlyOnPawchive: true,
+    metadata: { ...post.metadata, id, fileType },
+    fileUrls: { original: candidate.url, sample: candidate.thumb, preview: candidate.thumb, alternatives: {} },
+    downloadInfo: { isDownloadable: true, bestUrl: { url: candidate.url, type: 'original', size: 0 }, filename: `${id}.${fileType}` }
+  };
+}
+
 class UpgradeFinder {
-  constructor(pawchiveService, storePath) {
+  /**
+   * @param {object} [options]
+   * @param {(artist: string, site: string, onPage: Function) => Promise<{posts, complete}>} [options.allPosts]
+   *   every e621 post by an artist, to find work that isn't on e621
+   */
+  constructor(pawchiveService, storePath, { allPosts = null } = {}) {
     this.pawchive = pawchiveService;
+    this.allPosts = allPosts;
     this.storePath = storePath;
     this.store = { links: {}, decisions: {}, hashes: {} };
     try {
@@ -139,7 +182,7 @@ class UpgradeFinder {
    * @param {number} [args.pages] Pawchive pages (50 posts) to scan
    * @param {function} [onProgress] ({ stage, done, total, message })
    */
-  async find({ artist, posts, pages = DEFAULT_PAGES }, onProgress = () => {}) {
+  async find({ artist, posts, pages = DEFAULT_PAGES, site = 'e621' }, onProgress = () => {}) {
     const creator = this.getLink(artist);
     if (!creator) {
       const e = new Error('Choose which Pawchive creator this artist is first');
@@ -160,6 +203,7 @@ class UpgradeFinder {
           const hash = fileHash(file);
           if (!hash) continue;
           files.push({
+            raw: post,
             hash,
             name: file.name || '',
             url: fileUrl(file),
@@ -189,6 +233,33 @@ class UpgradeFinder {
     const candidates = files.map((f, i) => ({ ...f, fingerprint: candidateHashes[i] })).filter(c => c.fingerprint);
     const withPrints = originals.map((p, i) => ({ post: p, postId: p.id, fingerprint: originalHashes[i] })).filter(o => o.fingerprint);
     const pairs = pairUp(withPrints, candidates, this.store.decisions);
+
+    // 2b. Every e621 post by the artist, for work that isn't on e621 at all.
+    let catalog = null;
+    if (this.allPosts) {
+      try {
+        onProgress({ stage: 'catalog', done: 0, total: 1, message: 'Listing the artist\'s e621 posts' });
+        const listed = await this.allPosts(artist, site, (n) => onProgress({ stage: 'catalog', done: 0, total: 1, message: `Listing the artist's e621 posts (${n})` }));
+        const loaded = new Set(withPrints.map(o => String(o.postId)));
+        const extra = listed.posts.filter(p => !loaded.has(String(p.id)) && printUrl(p) && IMAGE_TYPES.has(String(p.metadata?.fileType || '').toLowerCase()));
+        let printed = 0;
+        const extraHashes = await mapLimit(extra, CONCURRENCY, p => this.fingerprint(`e6:${printUrl(p)}`, printUrl(p)), () => {
+          onProgress({ stage: 'catalog', done: ++printed, total: extra.length, message: `Comparing with all ${listed.posts.length} e621 posts (${printed} of ${extra.length})` });
+        });
+        this.save();
+        catalog = {
+          posts: listed.posts.length,
+          complete: listed.complete,
+          prints: [...withPrints.map(o => o.fingerprint), ...extraHashes.filter(Boolean)]
+        };
+      } catch (error) {
+        console.warn('⚠️ Could not list the artist\'s e621 posts; only loaded posts are compared:', error.message);
+      }
+    }
+    const prints = catalog ? catalog.prints : withPrints.map(o => o.fingerprint);
+    const missing = notOnE621(candidates, prints)
+      .map(c => postForImage(c, creator.name))
+      .filter(Boolean);
 
     // 3. Real sizes for the candidates only.
     const paired = withPrints.filter(o => pairs.has(o.postId));
@@ -242,7 +313,12 @@ class UpgradeFinder {
       scannedImages: candidates.length,
       checkedPosts: withPrints.length,
       cutoff,
-      results
+      results,
+      // Pawchive images not on e621: against every e621 post when they could be
+      // listed (allPostsCompared), else only against the loaded ones.
+      missing,
+      allPostsCompared: catalog ? catalog.posts : 0,
+      allPostsComplete: Boolean(catalog?.complete)
     };
   }
 }
@@ -257,4 +333,5 @@ function extOfUrl(url) {
 }
 
 module.exports = UpgradeFinder;
+Object.assign(module.exports, { pairUp, notOnE621, postForImage });
 Object.assign(module.exports, { pairUp, mapLimit, artistKey, pairKey, DEFAULT_PAGES });

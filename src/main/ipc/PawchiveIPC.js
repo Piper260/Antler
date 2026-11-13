@@ -49,7 +49,7 @@ class PawchiveIPC {
       const send = (progress) => {
         if (!event.sender.isDestroyed()) event.sender.send('pawchive:upgrade-progress', progress);
       };
-      this.finder.running = this.finder.find({ artist: args.artist, posts: args.posts || [], pages: args.pages }, send);
+      this.finder.running = this.finder.find({ artist: args.artist, posts: args.posts || [], pages: args.pages, site: args.site === 'e926' ? 'e926' : 'e621' }, send);
       try {
         return { success: true, ...(await this.finder.running) };
       } catch (error) {

@@ -374,6 +374,11 @@
   outline: 1px solid #ffffff;
 }
 
+.post-upgrade-badge.status-missing {
+  background: var(--success);
+  cursor: default;
+}
+
 .post-upgrade-badge.status-same,
 .post-upgrade-badge.status-variant {
   color: #c8c8c8;

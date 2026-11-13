@@ -568,6 +568,28 @@ async searchPostsByArtist(artistName, options = {}) {
 }
 
 /**
+ * Every post tagged with an artist, newest first, up to `max`: what the
+ * Pawchive upgrade finder compares against to tell work that never reached
+ * e621 from work the search just hadn't loaded. Pages back with
+ * page=b<lowest id> (e621's cursor), 320 posts at a time.
+ * @returns {Promise<{posts: object[], complete: boolean}>} posts in formatPostData shape
+ */
+async allPostsByArtist(artistName, { site = 'e621', max = 3200, onPage } = {}) {
+  const posts = [];
+  let before = null;
+  for (;;) {
+    const cursor = before ? `&page=b${before}` : '';
+    const response = await this.makeRequest(`/posts.json?tags=${encodeURIComponent(artistName)}&limit=320${cursor}`, E621Service.siteUrl(site));
+    const page = response?.posts || [];
+    for (const raw of page) posts.push(this.formatPostData(raw));
+    onPage?.(posts.length);
+    if (page.length < 320) return { posts, complete: true };
+    if (posts.length >= max) return { posts, complete: false };
+    before = Math.min(...page.map(p => p.id));
+  }
+}
+
+/**
  * Search posts by character name
  */
 async searchPostsByCharacter(characterName, options = {}) {

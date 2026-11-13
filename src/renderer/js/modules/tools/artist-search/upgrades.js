@@ -35,6 +35,7 @@ updateUpgradeButton() {
 
 resetUpgrades() {
   this.upgradeResults = new Map();
+  this.missingCount = 0;
   this.upgradeRun = null;
   this.reviewSession = { same: 0, variant: 0, different: 0 };
   this.renderUpgradeBar();
@@ -58,7 +59,7 @@ async findUpgrades() {
   this.upgradeBusy = true;
   this.setUpgradeButtonBusy(true);
   const process = this.app?.startProcess?.({ toolId: this.id, label: `Finding upgrades: ${artist}`, total: 100 });
-  const weights = { posts: [0, 15], fingerprints: [15, 85], sizes: [85, 100] };
+  const weights = { posts: [0, 10], fingerprints: [10, 50], catalog: [50, 90], sizes: [90, 100] };
   const off = window.electronAPI.pawchive.onUpgradeProgress((p) => {
     const [from, to] = weights[p.stage] || [0, 100];
     const share = p.total ? p.done / p.total : 0;
@@ -72,7 +73,7 @@ async findUpgrades() {
       metadata: { fileType: p.upgrade?.originalType || p.metadata?.fileType, dimensions: p.upgrade?.originalDims || p.metadata?.dimensions, fileSize: p.upgrade?.originalSize ?? p.metadata?.fileSize },
       fileUrls: { preview: p.fileUrls?.preview, sample: p.fileUrls?.sample }
     }));
-    const result = await window.electronAPI.pawchive.findUpgrades({ artist, posts });
+    const result = await window.electronAPI.pawchive.findUpgrades({ artist, posts, site: this.source });
     if (artist !== this.currentArtist) {
       process?.finish({ message: 'Search changed; results dropped', warning: true });
       return;
@@ -92,13 +93,15 @@ async findUpgrades() {
       const post = this.currentPosts.find(p => p.id === r.postId);
       if (post && r.status === 'upgrade') this.applyUpgrade(post, r);
     }
+    this.showMissingPosts(result.missing || []);
     this.refreshUpgradeBadges();
     this.renderUpgradeBar();
 
     const counts = this.upgradeCounts();
-    process?.finish({ message: `${counts.upgrade} upgrades, ${counts.ask} to review` });
+    const missing = (result.missing || []).length;
+    process?.finish({ message: `${counts.upgrade} upgrades, ${counts.ask} to review, ${missing} only on Pawchive` });
     if (counts.ask) this.showToast(`${counts.ask} possible ${counts.ask === 1 ? 'match needs' : 'matches need'} a look - press Review`, 'info');
-    else this.showToast(`${counts.upgrade} upgrades found on Pawchive`, counts.upgrade ? 'success' : 'info');
+    else this.showToast(`${counts.upgrade} upgrades${missing ? `, and ${missing} Pawchive ${missing === 1 ? 'image' : 'images'} not on e621 added at the end` : ''}`, counts.upgrade || missing ? 'success' : 'info');
   } catch (error) {
     console.error('❌ Upgrade search failed:', error);
     process?.finish({ message: 'Failed', failed: true });
@@ -108,6 +111,42 @@ async findUpgrades() {
     this.upgradeBusy = false;
     this.setUpgradeButtonBusy(false);
   }
+}
+
+/**
+ * The creator's Pawchive images that aren't on e621, added after the
+ * results as their own posts (they download from Pawchive). A new run
+ * replaces the last run's.
+ */
+showMissingPosts(missing) {
+  const old = this.currentPosts.filter(p => p.onlyOnPawchive);
+  if (old.length) {
+    const gone = new Set(old.map(p => p.id));
+    this.currentPosts = this.currentPosts.filter(p => !gone.has(p.id));
+    for (const id of gone) {
+      this.selectedPosts.delete(id);
+      document.querySelector(`[data-post-id="${CSS.escape(String(id))}"]`)?.remove();
+    }
+  }
+  this.missingCount = missing.length;
+  if (missing.length) {
+    const posts = missing.map(p => ({ ...p, onlyOnPawchive: true }));
+    this.currentPosts.push(...posts);
+    this.appendNewPosts(posts);
+    this.checkDownloadStatus?.(posts);
+  }
+  this.updatePostCounts?.();
+  this.updateSelectionUI?.();
+}
+
+selectMissingPosts() {
+  for (const post of this.currentPosts) {
+    if (post.onlyOnPawchive && !this.selectedPosts.has(post.id)) {
+      this.selectedPosts.add(post.id);
+      this.updatePostSelectionUI(post.id);
+    }
+  }
+  this.updateSelectionUI();
 }
 
 setUpgradeButtonBusy(busy) {
@@ -154,6 +193,14 @@ revertUpgrade(post) {
 
 /** Called from createPostElement, so re-rendered cards keep their badge. */
 addUpgradeBadge(postDiv, post) {
+  if (post.onlyOnPawchive) {
+    const badge = document.createElement('span');
+    badge.className = 'post-upgrade-badge status-missing';
+    badge.textContent = 'Only on Pawchive';
+    badge.title = [post.metadata?.description, 'Not found among the artist\'s e621 posts; downloads from Pawchive.'].filter(Boolean).join('\n');
+    postDiv.appendChild(badge);
+    return;
+  }
   const r = this.upgradeResults?.get(post.id);
   if (!r) return;
   const badge = document.createElement('button');
@@ -196,11 +243,13 @@ renderUpgradeBar() {
   const upgraded = [...this.upgradeResults.values()].filter(r => r.status === 'upgrade');
   const avg = upgraded.length ? upgraded.reduce((s, r) => s + ratioOf(r), 0) / upgraded.length : 0;
   const run = this.upgradeRun;
+  const missing = this.missingCount || 0;
   const parts = [
     `${c.upgrade} ${c.upgrade === 1 ? 'upgrade' : 'upgrades'}${avg ? ` (average ${avg.toFixed(1)}× the pixels)` : ''}`,
     `${c.same} same size`,
     c.variant ? `${c.variant} variants` : '',
-    `${c.ask} to review`
+    `${c.ask} to review`,
+    `${missing} only on Pawchive`
   ].filter(Boolean);
   const session = this.reviewSession || {};
   const reviewed = (session.same || 0) + (session.variant || 0) + (session.different || 0);
@@ -208,11 +257,16 @@ renderUpgradeBar() {
   this.elements.upgrade_bar_text.textContent =
     `Pawchive: ${run.creator.name} (${run.creator.service}) - ${parts.join(', ')}. ` +
     `Scanned ${run.scannedPosts} posts, ${run.scannedImages} images` +
+    (run.allPostsCompared ? `, compared with all ${run.allPostsCompared}${run.allPostsComplete ? '' : '+'} e621 posts` : ', compared with the loaded posts only') +
     (reviewed ? `. Reviewed this session: ${reviewed}` : '') + '.';
   this.elements.upgrade_bar_text.title = `Pairs at or under ${run.cutoff} of 64 differing bits, with the same shape, are accepted without asking. Your review answers move this.`;
   this.elements.review_upgrades_btn.textContent = c.ask ? `Review (${c.ask})` : 'Review';
   this.elements.review_upgrades_btn.disabled = !c.ask;
   this.elements.select_upgrades_btn.disabled = !c.upgrade;
+  if (this.elements.select_missing_btn) {
+    this.elements.select_missing_btn.style.display = missing ? '' : 'none';
+    this.elements.select_missing_btn.textContent = `Select Pawchive-only (${missing})`;
+  }
   bar.style.display = '';
 }
 

@@ -151,6 +151,7 @@ export default class ArtistSearchTemplate {
                   <span class="posts-upgrade-text" id="upgrade-bar-text"></span>
                   <button class="btn btn-sm btn-secondary" id="change-creator-btn" title="Link this artist to a different Pawchive creator">Change creator</button>
                   <button class="btn btn-sm btn-secondary" id="select-upgrades-btn" title="Select every post that will download from Pawchive">Select upgrades</button>
+                  <button class="btn btn-sm btn-secondary" id="select-missing-btn" style="display: none;" title="Select the Pawchive images that aren't on e621 (added at the end of the results)">Select Pawchive-only</button>
                   <button class="btn btn-sm btn-primary" id="review-upgrades-btn" title="Compare the uncertain pairs one by one">Review</button>
                 </div>
 

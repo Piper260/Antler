@@ -175,7 +175,7 @@ class ArtistSearchTool extends BaseTool {
 
       // Pawchive upgrades
       'find-upgrades-btn', 'upgrade-divider', 'upgrade-bar', 'upgrade-bar-text', 'review-upgrades-btn',
-      'select-upgrades-btn', 'change-creator-btn', 'find-on-x-btn',
+      'select-upgrades-btn', 'select-missing-btn', 'change-creator-btn', 'find-on-x-btn',
       'x-index-bar', 'x-index-text', 'x-index-stop-btn', 'x-index-track', 'x-index-fill',
 
       // Category (subfolder) assignment
@@ -310,6 +310,7 @@ class ArtistSearchTool extends BaseTool {
     this.on(this.elements.x_index_stop_btn, 'click', () => window.electronAPI.x.stopIndex());
     this.on(this.elements.review_upgrades_btn, 'click', () => this.openReview());
     this.on(this.elements.select_upgrades_btn, 'click', () => this.selectUpgradedPosts());
+    this.on(this.elements.select_missing_btn, 'click', () => this.selectMissingPosts());
     this.on(this.elements.change_creator_btn, 'click', () => this.changeCreator());
     this.updateUpgradeButton();
 

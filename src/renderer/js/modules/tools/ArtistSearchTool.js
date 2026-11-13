@@ -689,6 +689,12 @@ searchSource(name, options) {
  */
 setSource(source) {
   this.source = ['e621', 'e926', 'inkbunny', 'pawchive', 'x'].includes(source) ? source : 'e621';
+  if (this.elements.tag_filter_input) {
+    this.elements.tag_filter_input.placeholder = this.source === 'pawchive' ? 'Refine by tags or title' : 'Refine by tags';
+    this.elements.tag_filter_input.title = this.source === 'pawchive'
+      ? 'Words to look for in post titles and text (Pawchive posts are rarely tagged)'
+      : '';
+  }
   try { localStorage.setItem('antler-search-source', this.source); } catch (_) { /* not remembered */ }
   this.suggestionCache?.clear();
   this.resetXIndex?.();

@@ -201,7 +201,9 @@ class PawchiveService {
   /**
    * Artist or character search, shaped like the other services' search():
    * { posts, pagination: { currentPage, hasMore, totalCount } }.
-   * Artist: the best-matching creator's posts, filtered by `additionalTags`.
+   * Artist: the best-matching creator's posts; `additionalTags` (the Refine
+   * box) search their titles and text, since few Pawchive posts are tagged
+   * (Pawchive's q, which needs 3 letters or more).
    * Character: Pawchive has no character tags, so the name is a text search.
    */
   async search(mode, name, options = {}) {
@@ -212,7 +214,14 @@ class PawchiveService {
     if (mode === 'artist') {
       creator = options.creator || (await this.findCreators(name, 1))[0] || null;
       if (!creator) return { posts: [], pagination: { currentPage, hasMore: false, totalCount: 0 } };
-      raw = await this.creatorPostsPage(creator, currentPage, additionalTags.length ? { tag: additionalTags } : {});
+      const q = additionalTags.join(' ').trim();
+      if (q && q.length < 3) {
+        const error = new Error('Pawchive searches titles with 3 letters or more');
+        error.userMessage = error.message;
+        error.type = 'short-query';
+        throw error;
+      }
+      raw = await this.creatorPostsPage(creator, currentPage, q.length >= 3 ? { q } : {});
     } else {
       const q = [String(name).replace(/_/g, ' '), ...additionalTags].join(' ').trim();
       if (q.length < 3) return { posts: [], pagination: { currentPage, hasMore: false, totalCount: 0 } };

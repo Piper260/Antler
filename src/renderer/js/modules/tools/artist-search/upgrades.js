@@ -36,6 +36,7 @@ updateUpgradeButton() {
 resetUpgrades() {
   this.upgradeResults = new Map();
   this.missingCount = 0;
+  this.missingHidden = 0;
   this.upgradeRun = null;
   this.reviewSession = { same: 0, variant: 0, different: 0 };
   this.renderUpgradeBar();
@@ -128,9 +129,17 @@ showMissingPosts(missing) {
       document.querySelector(`[data-post-id="${CSS.escape(String(id))}"]`)?.remove();
     }
   }
-  this.missingCount = missing.length;
-  if (missing.length) {
-    const posts = missing.map(p => ({ ...p, onlyOnPawchive: true }));
+  // With Refine words set, only Pawchive-only posts whose title or tags have
+  // them all (filters like rating:e don't apply to titles and are skipped).
+  const words = String(this.currentTagFilter || '').toLowerCase().split(/[\s,]+/)
+    .filter(w => w && !w.includes(':') && !w.startsWith('-'))
+    .map(w => w.replace(/_/g, ' '));
+  const text = (p) => [p.metadata?.description, ...(p.tags?.general || [])].join(' ').toLowerCase().replace(/_/g, ' ');
+  const shown = words.length ? missing.filter(p => words.every(w => text(p).includes(w))) : missing;
+  this.missingCount = shown.length;
+  this.missingHidden = missing.length - shown.length;
+  if (shown.length) {
+    const posts = shown.map(p => ({ ...p, onlyOnPawchive: true }));
     this.currentPosts.push(...posts);
     this.appendNewPosts(posts);
     this.checkDownloadStatus?.(posts);
@@ -249,7 +258,7 @@ renderUpgradeBar() {
     `${c.same} same size`,
     c.variant ? `${c.variant} variants` : '',
     `${c.ask} to review`,
-    `${missing} only on Pawchive`
+    `${missing} only on Pawchive${this.missingHidden ? ` matching "${this.currentTagFilter}" (${this.missingHidden} more without it)` : ''}`
   ].filter(Boolean);
   const session = this.reviewSession || {};
   const reviewed = (session.same || 0) + (session.variant || 0) + (session.different || 0);

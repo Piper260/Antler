@@ -99,9 +99,11 @@ describe('PawchiveService.search', () => {
       return Array.from({ length: PAGE_SIZE }, (_, i) => ({ ...post, id: String(i) }));
     };
     const result = await service.search('artist', 'Mingrix', { page: 2, additionalTags: ['black_apron'] });
-    expect(calls[1]).toEqual(['/patreon/user/2', { tag: ['black apron'], o: 50 }]);
+    // Refine words search titles and text (q): few Pawchive posts are tagged.
+    expect(calls[1]).toEqual(['/patreon/user/2', { q: 'black apron', o: 50 }]);
     expect(result.posts).toHaveLength(PAGE_SIZE);
     expect(result.pagination).toEqual({ currentPage: 2, hasMore: true, totalCount: null });
+    await expect(service.search('artist', 'Mingrix', { additionalTags: ['xy'] })).rejects.toThrow('3 letters');
     expect(result.creator.name).toBe('mingrix');
   });
 

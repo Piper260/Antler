@@ -33,6 +33,20 @@ describe('Pawchive work not on e621', () => {
     expect(notOnE621(candidates, [print(0)]).map(c => c.hash)).toEqual(['a']);
   });
 
+  test('an image whose post has another image on e621 is placed beside that e621 post', () => {
+    const { claimsOf, siblingAnchor } = require('../src/main/services/UpgradeFinder');
+    const post = { id: 'p' };
+    const lone = { id: 'q' };
+    const candidates = [
+      { hash: 'one', raw: post, index: 0, fingerprint: print(1) },  // on e621 as post 900
+      { hash: 'two', raw: post, index: 1, fingerprint: other },     // not on e621
+      { hash: 'solo', raw: lone, index: 0, fingerprint: 'aaaaaaaaaaaaaaaa' }
+    ];
+    const claimed = claimsOf(candidates, [{ fingerprint: print(0), id: 900 }]);
+    expect(siblingAnchor(candidates[1], claimed)).toBe(900);
+    expect(siblingAnchor(candidates[2], claimed)).toBeNull();
+  });
+
   test('a missing image becomes a post that downloads from Pawchive', () => {
     // Pawchive files are named by their sha256.
     const one = 'aa'.repeat(32);

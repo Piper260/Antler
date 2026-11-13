@@ -155,8 +155,33 @@ showMissingPosts(missing) {
   this.updateSelectionUI?.();
 }
 
-/** Posts from elsewhere placed among the results by the current sort. */
+/**
+ * Posts from elsewhere placed among the results: a Pawchive image whose
+ * post also has an image on e621 (nextTo) goes right after that e621 post,
+ * so a post's images stay together; the rest go by the current sort.
+ */
 mixInPosts(current, extra) {
+  const present = new Set(current.map(p => String(p.id)));
+  const beside = extra.filter(p => p.nextTo != null && present.has(String(p.nextTo)));
+  const placed = this.sortMixed(current, extra.filter(p => !beside.includes(p)));
+  if (!beside.length) return placed;
+  const after = new Map();
+  for (const p of beside) {
+    const key = String(p.nextTo);
+    if (!after.has(key)) after.set(key, []);
+    after.get(key).push(p);
+  }
+  const out = [];
+  for (const p of placed) {
+    out.push(p);
+    const group = after.get(String(p.id));
+    if (group) out.push(...group);
+  }
+  return out;
+}
+
+/** The current sort over results plus posts from elsewhere. */
+sortMixed(current, extra) {
   const sort = this.searchFilters?.sortBy;
   if (sort === 'training' && window.TrainingScore) {
     return window.TrainingScore.rankPosts([...current, ...extra], this.searchMode);

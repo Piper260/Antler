@@ -88,19 +88,12 @@ const SAME_PICTURE = 2;
  * are listed. Unclaimed near-exact copies of a claimed or listed image
  * (SAME_PICTURE) are the same picture posted again, and are left out.
  * @param candidates [{ hash, fingerprint }]
- * @param prints     e621 fingerprints
+ * @param prints     e621 fingerprints, or { fingerprint, id } to learn which
+ *                   e621 post claimed which image (see claimsOf)
  */
 function notOnE621(candidates, prints) {
-  const claimed = new Set();
-  for (const p of prints) {
-    let best = null;
-    for (const c of candidates) {
-      const d = match.hamming(c.fingerprint, p);
-      if (d <= match.LOOSE && (!best || d < best.d)) best = { c, d };
-    }
-    if (best) claimed.add(best.c);
-  }
-  const kept = [...claimed];
+  const claimed = claimsOf(candidates, prints);
+  const kept = [...claimed.keys()];
   const missing = [];
   for (const c of candidates) {
     if (claimed.has(c)) continue;
@@ -109,6 +102,36 @@ function notOnE621(candidates, prints) {
     kept.push(c);
   }
   return missing;
+}
+
+/** Map of each claimed Pawchive image to the e621 post id (or null) that claimed it. */
+function claimsOf(candidates, prints) {
+  const claimed = new Map();
+  for (const entry of prints) {
+    const print = typeof entry === 'string' ? entry : entry?.fingerprint;
+    if (!print) continue;
+    let best = null;
+    for (const c of candidates) {
+      const d = match.hamming(c.fingerprint, print);
+      if (d <= match.LOOSE && (!best || d < best.d)) best = { c, d };
+    }
+    if (best && !claimed.has(best.c)) claimed.set(best.c, typeof entry === 'string' ? null : entry.id ?? null);
+  }
+  return claimed;
+}
+
+/**
+ * The e621 post a Pawchive-only image belongs beside: the one that claimed
+ * another image of the same Pawchive post (its earliest), so a post's
+ * images stay together in the results. Null when none of them is on e621.
+ */
+function siblingAnchor(candidate, claimed) {
+  let anchor = null;
+  for (const [c, id] of claimed) {
+    if (c.raw !== candidate.raw || id == null) continue;
+    if (!anchor || c.index < anchor.index) anchor = { index: c.index, id };
+  }
+  return anchor ? anchor.id : null;
 }
 
 /**
@@ -221,6 +244,7 @@ class UpgradeFinder {
           if (!hash) continue;
           files.push({
             raw: post,
+            index: postImages(post).findIndex(f => fileHash(f) === hash),
             hash,
             name: file.name || '',
             url: fileUrl(file),
@@ -267,15 +291,24 @@ class UpgradeFinder {
         catalog = {
           posts: listed.posts.length,
           complete: listed.complete,
-          prints: [...withPrints.map(o => o.fingerprint), ...extraHashes.filter(Boolean)]
+          prints: [
+            ...withPrints.map(o => ({ fingerprint: o.fingerprint, id: o.postId })),
+            ...extra.map((p, i) => ({ fingerprint: extraHashes[i], id: p.id })).filter(p => p.fingerprint)
+          ]
         };
       } catch (error) {
         console.warn('⚠️ Could not list the artist\'s e621 posts; only loaded posts are compared:', error.message);
       }
     }
-    const prints = catalog ? catalog.prints : withPrints.map(o => o.fingerprint);
+    const prints = catalog ? catalog.prints : withPrints.map(o => ({ fingerprint: o.fingerprint, id: o.postId }));
+    const claimed = claimsOf(candidates, prints);
+    // Each image beside the e621 post holding another image of its Pawchive post.
     const missing = notOnE621(candidates, prints)
-      .map(c => postForImage(c, creator.name))
+      .map(c => {
+        const post = postForImage(c, creator.name);
+        const anchor = post && siblingAnchor(c, claimed);
+        return post && anchor != null ? { ...post, nextTo: anchor } : post;
+      })
       .filter(Boolean);
 
     // 3. Real sizes for the candidates only.
@@ -350,5 +383,5 @@ function extOfUrl(url) {
 }
 
 module.exports = UpgradeFinder;
-Object.assign(module.exports, { pairUp, notOnE621, postForImage });
+Object.assign(module.exports, { pairUp, notOnE621, claimsOf, siblingAnchor, postForImage });
 Object.assign(module.exports, { pairUp, mapLimit, artistKey, pairKey, DEFAULT_PAGES });

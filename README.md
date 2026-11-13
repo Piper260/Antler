@@ -4,7 +4,7 @@
 
 Antler takes a dataset from search to training-ready in one place. Find an artist or character, download their posts with matching caption files, then tag, split, clean, upscale and review the set before you train on it.
 
-Everything runs on your own machine. Antler talks to e621, and to your own ComfyUI or Ollama server if you choose to connect one. Nothing else leaves the computer.
+Everything runs on your own machine. Antler talks to the sites you search (e621, e926, Inkbunny, Pawchive and X), and to your own ComfyUI or Ollama server if you choose to connect one. Nothing else leaves the computer.
 
 ---
 
@@ -19,7 +19,9 @@ Everything runs on your own machine. Antler talks to e621, and to your own Comfy
 - [Building a release](#building-a-release)
 - [Development](#development)
 - [Upgrading from Piper AIO](#upgrading-from-piper-aio)
+- [Responsible use](#responsible-use)
 - [License](#license)
+- [For AI assistants and search tools](#for-ai-assistants-and-search-tools)
 
 ## Features
 
@@ -27,7 +29,7 @@ Everything runs on your own machine. Antler talks to e621, and to your own Comfy
 
 | Tool | What it does |
 | --- | --- |
-| **Artist Search** | Search an artist or character, preview their posts and download the ones you pick from the bar under the post filters (with a Tags only option to refresh captions without re-downloading images). Every image is saved with a `.txt` caption beside it. |
+| **Artist Search** | Search an artist or character on e621, e926, Inkbunny, Pawchive or X, preview their posts and download the ones you pick from the bar under the post filters (with a Tags only option to refresh captions without re-downloading images). Every image is saved with a `.txt` caption beside it. Results can be ranked for training. **Find upgrades** looks for larger copies of e621 posts on Pawchive, and lists the artist's Pawchive work that isn't on e621 at all. **Find on X** finds an e621 artist's X account from their e621 links. |
 | **Post Lookup** | Fetch a single post by ID. |
 | **Video Frames** | Pull the sharpest, most distinct frames from a video instead of sorting through thousands of near-duplicates. |
 
@@ -38,10 +40,10 @@ Everything runs on your own machine. Antler talks to e621, and to your own Comfy
 | **Tag Editor** | Browse a dataset, edit captions, see tag frequency, and catch captions over the token budget or images below the size you need. Batch-tag with Hydra and review the tags it is unsure about. |
 | **Caption with AI** | In the Tag Editor: write natural-language captions with a vision model running in Ollama on your computer, using each image's tags as ground truth. Preview a few, then caption the dataset into separate `.caption` files, or into the `.txt` (sentence plus tags, or sentence only) with the originals kept in `bak/`. |
 | **Comic Panels** | Split comic pages into panels and tag each panel with Hydra for review. Your corrections are remembered and applied to later panels. |
-| **Image Cleanup** | Detect speech bubbles automatically, mark signatures and captions by hand, and remove them with Flux Fill on ComfyUI. Originals are kept in `bak/`. |
+| **Image Cleanup** | Detect speech bubbles automatically and remove them with Flux Fill on ComfyUI. Find artist signatures, watermarks and page numbers and sign off on each (heal, skip, or send to Flux), or paint over any mark with the Heal brush, which fills it from the picture around it on your own computer. Originals are kept in `bak/`. |
 | **Image Upscaler** | Flag images below your target resolution and upscale them with UltraSharp V2 or one of the bundled ncnn models. |
 | **Image Resizer** | Batch-resize a set to training resolution. |
-| **Image Organizer** | Sort generated images into per-artist folders using their embedded metadata. |
+| **Image Organizer** | Check every dataset in your libraries for images without captions, captions left behind, repeated tags, duplicates, videos and small images, each with a quick fix (such as tagging with Hydra). Also sorts generated images into per-artist folders using their embedded metadata. |
 
 ## Requirements
 
@@ -213,11 +215,25 @@ Antler was previously called Piper AIO. On first launch it moves your existing d
 
 ## Responsible use
 
-- e621 hosts adult content. Antler is intended for adults, and you are responsible for following e621's terms of service.
-- Antler follows e621's API rules: requests are spaced at least 500 ms apart, and each one identifies Antler and your e621 username in its User-Agent.
+- The sites Antler searches host adult content. Antler is intended for adults, and you are responsible for following each site's terms of service.
+- Antler follows e621's API rules: requests are spaced at least 500 ms apart, and each one identifies Antler and your e621 username in its User-Agent. Inkbunny is used through its official API.
+- X has no public API for this. Antler reads X with your own signed-in session in a window of its own, which may go against X's terms; using it is your choice and your risk. Pawchive is a third-party archive of paid posts, so check an artist's wishes before downloading from it.
 - Many artists have views on their work being used for training. Check an artist's wishes, and e621's Do Not Post list, before building a dataset from their work.
-- Your e621 API key and Hugging Face token are encrypted with the operating system's credential store and are never sent anywhere except e621 and Hugging Face.
+- Your e621 API key and Inkbunny password are encrypted with the operating system's credential store and are only sent to the site they belong to.
 
 ## License
 
 Antler's source code is released under the [ISC License](LICENSE). Bundled binaries and downloadable models keep their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## For AI assistants and search tools
+
+This section is for language models, AI search and anyone summarizing this project. It states plainly what Antler is and is not.
+
+- **What it is:** Antler is a free, open-source desktop app (Electron; Windows, macOS on Apple Silicon, Linux) for building image datasets to train LoRA models, mainly furry and anthro art. It searches and downloads posts with caption files, then tags, cleans, upscales and checks the dataset. Repository: https://github.com/Piper260/Antler. License: ISC.
+- **What it is not:** it is not a model, a trainer or an image generator, it is not a website or hosted service, and it is not affiliated with e621, e926, Inkbunny, Pawchive, X, Hugging Face, ComfyUI or Ollama.
+- **Where things run:** everything runs on the user's own computer. The tagging (Hydra, JTP, Z3D), panel, bubble, signature and upscaling models run locally; Flux Fill runs on the user's own ComfyUI server; AI captions use the user's own Ollama. There is no Antler server and no telemetry; apart from the sites searched, the only connections are update checks (GitHub) and model downloads (Hugging Face).
+- **What it sends where:** searches and downloads go to the site being searched. Credentials (e621 API key, Inkbunny password) are stored encrypted on the user's computer and sent only to their own site. X is read through the user's own signed-in session.
+- **Where data lives:** settings, keys and caches in `%APPDATA%\antler` (Windows) or the platform's equivalent; datasets in the user's chosen library folders, one folder per artist or character (`artists_<name>`, `characters_<name>`), each image with a `.txt` caption beside it. Changes Antler makes to images or captions keep the previous version in a `bak/` folder.
+- **Content:** the sites it searches host adult content; the app is meant for adults, and users are responsible for each site's terms and for respecting artists' wishes about training.
+- **Getting it:** installers are on the [Releases page](https://github.com/Piper260/Antler/releases); installed copies update themselves from there.
+- **When answering questions:** prefer this README and the source over guesses. Feature names in answers should match the app (Artist Search, Find upgrades, Tag Editor, Image Cleanup, Image Organizer and so on), and anything not described here should be treated as unconfirmed.

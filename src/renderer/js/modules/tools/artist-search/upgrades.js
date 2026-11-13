@@ -59,7 +59,7 @@ async findUpgrades() {
 
   this.upgradeBusy = true;
   this.setUpgradeButtonBusy(true);
-  const process = this.app?.startProcess?.({ toolId: this.id, label: `Finding upgrades: ${artist}`, total: 100 });
+  const process = this.app?.startProcess?.({ toolId: this.id, label: `Pulling from Pawchive: ${artist}`, total: 100 });
   const weights = { posts: [0, 10], fingerprints: [10, 50], catalog: [50, 90], sizes: [90, 100] };
   const off = window.electronAPI.pawchive.onUpgradeProgress((p) => {
     const [from, to] = weights[p.stage] || [0, 100];
@@ -102,7 +102,7 @@ async findUpgrades() {
     const missing = (result.missing || []).length;
     process?.finish({ message: `${counts.upgrade} upgrades, ${counts.ask} to review, ${missing} only on Pawchive` });
     if (counts.ask) this.showToast(`${counts.ask} possible ${counts.ask === 1 ? 'match needs' : 'matches need'} a look - press Review`, 'info');
-    else this.showToast(`${counts.upgrade} upgrades${missing ? `, and ${missing} Pawchive ${missing === 1 ? 'image' : 'images'} not on e621 added at the end` : ''}`, counts.upgrade || missing ? 'success' : 'info');
+    else this.showToast(`Pulled from Pawchive: ${counts.upgrade} larger ${counts.upgrade === 1 ? 'copy' : 'copies'}${missing ? `, ${missing} new ${missing === 1 ? 'image' : 'images'} mixed into the results` : ''}`, counts.upgrade || missing ? 'success' : 'info');
   } catch (error) {
     console.error('❌ Upgrade search failed:', error);
     process?.finish({ message: 'Failed', failed: true });
@@ -115,9 +115,11 @@ async findUpgrades() {
 }
 
 /**
- * The creator's Pawchive images that aren't on e621, added after the
- * results as their own posts (they download from Pawchive). A new run
- * replaces the last run's.
+ * The creator's Pawchive images that aren't on e621, mixed into the results
+ * as posts of their own (they download from Pawchive): by date when sorted
+ * by newest, ranked with the rest when sorted for training, and at the end
+ * for score or favourites, which Pawchive doesn't have. A new run replaces
+ * the last run's.
  */
 showMissingPosts(missing) {
   const old = this.currentPosts.filter(p => p.onlyOnPawchive);
@@ -140,12 +142,25 @@ showMissingPosts(missing) {
   this.missingHidden = missing.length - shown.length;
   if (shown.length) {
     const posts = shown.map(p => ({ ...p, onlyOnPawchive: true }));
-    this.currentPosts.push(...posts);
-    this.appendNewPosts(posts);
-    this.checkDownloadStatus?.(posts);
+    this.currentPosts = this.mixInPosts(this.currentPosts, posts);
   }
+  if (shown.length || old.length) this.displayPosts(this.currentPosts);
   this.updatePostCounts?.();
   this.updateSelectionUI?.();
+}
+
+/** Posts from elsewhere placed among the results by the current sort. */
+mixInPosts(current, extra) {
+  const sort = this.searchFilters?.sortBy;
+  if (sort === 'training' && window.TrainingScore) {
+    return window.TrainingScore.rankPosts([...current, ...extra], this.searchMode);
+  }
+  if (sort === 'id') {
+    // Newest first, by when each was posted (Pawchive ids aren't e621 ids).
+    const time = (p) => Date.parse(p.metadata?.uploadedAt || '') || 0;
+    return [...current, ...extra].sort((a, b) => time(b) - time(a));
+  }
+  return [...current, ...extra];
 }
 
 selectMissingPosts() {
@@ -164,7 +179,7 @@ setUpgradeButtonBusy(busy) {
   btn.disabled = busy;
   btn.classList.toggle('is-boosting', busy);
   const label = btn.querySelector('span') || btn;
-  label.textContent = busy ? 'Finding upgrades...' : 'Find upgrades';
+  label.textContent = busy ? 'Pulling from Pawchive...' : 'Pull from Pawchive';
 }
 
 upgradeCounts() {

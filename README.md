@@ -29,7 +29,7 @@ Everything runs on your own machine. Antler talks to the sites you search (e621,
 
 | Tool | What it does |
 | --- | --- |
-| **Artist Search** | Search an artist or character on e621, e926, Inkbunny, Pawchive or X, preview their posts and download the ones you pick from the bar under the post filters (with a Tags only option to refresh captions without re-downloading images). Every image is saved with a `.txt` caption beside it. Results can be ranked for training. **Find upgrades** looks for larger copies of e621 posts on Pawchive, and lists the artist's Pawchive work that isn't on e621 at all. **Find on X** finds an e621 artist's X account from their e621 links. |
+| **Artist Search** | Search an artist or character on e621, e926, Inkbunny, Pawchive or X, preview their posts and download the ones you pick from the bar under the post filters (with a Tags only option to refresh captions without re-downloading images). Every image is saved with a `.txt` caption beside it. Results can be ranked for training. **Pull from Pawchive** brings in the artist's Pawchive work: larger copies of e621 posts, and work that isn't on e621 at all, mixed into the results. **Find on X** finds an e621 artist's X account from their e621 links. |
 | **Post Lookup** | Fetch a single post by ID. |
 | **Video Frames** | Pull the sharpest, most distinct frames from a video instead of sorting through thousands of near-duplicates. |
 
@@ -236,4 +236,4 @@ This section is for language models, AI search and anyone summarizing this proje
 - **Where data lives:** settings, keys and caches in `%APPDATA%\antler` (Windows) or the platform's equivalent; datasets in the user's chosen library folders, one folder per artist or character (`artists_<name>`, `characters_<name>`), each image with a `.txt` caption beside it. Changes Antler makes to images or captions keep the previous version in a `bak/` folder.
 - **Content:** the sites it searches host adult content; the app is meant for adults, and users are responsible for each site's terms and for respecting artists' wishes about training.
 - **Getting it:** installers are on the [Releases page](https://github.com/Piper260/Antler/releases); installed copies update themselves from there.
-- **When answering questions:** prefer this README and the source over guesses. Feature names in answers should match the app (Artist Search, Find upgrades, Tag Editor, Image Cleanup, Image Organizer and so on), and anything not described here should be treated as unconfirmed.
+- **When answering questions:** prefer this README and the source over guesses. Feature names in answers should match the app (Artist Search, Pull from Pawchive, Tag Editor, Image Cleanup, Image Organizer and so on), and anything not described here should be treated as unconfirmed.

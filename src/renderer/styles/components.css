@@ -105,7 +105,7 @@
 }
 
 /* Boost: the one decorative button, for a single heavy action per view
-   (Find upgrades). Accent outline; a light streak crosses it on hover, and
+   (Pull from Pawchive). Accent outline; a light streak crosses it on hover, and
    while it runs speed lines stream past and the streak repeats. Toggle
    .is-boosting (with disabled) while the work runs. */
 .btn-boost {

@@ -123,7 +123,7 @@ export default class ArtistSearchTemplate {
                   <input type="number" class="posts-filter-control posts-filter-top" id="top-n-input" value="50" min="1" title="How many of the highest training scores to select">
                   <button class="btn btn-sm btn-secondary" id="select-top-btn" title="Select the posts with the highest training scores">Select top</button>
                   <div class="toolbar-divider" id="upgrade-divider"></div>
-                  <button class="btn btn-sm btn-boost" id="find-upgrades-btn" title="Look for larger copies of these posts on Pawchive. Run it again after loading more posts."><i class="fas fa-angles-right"></i><span>Find upgrades</span></button>
+                  <button class="btn btn-sm btn-boost" id="find-upgrades-btn" title="Bring in the artist's Pawchive work: larger copies of the posts here, and work that isn't on e621, mixed into the results."><i class="fas fa-angles-right"></i><span>Pull from Pawchive</span></button>
                   <button class="btn btn-sm btn-secondary" id="find-on-x-btn" title="Find this artist's X account from their e621 page and search it"><i class="fab fa-x-twitter"></i> Find on X</button>
                   <div class="toolbar-divider" id="category-toolbar-divider" style="display: none;"></div>
                   <select class="posts-filter-control" id="bulk-category-select" style="display: none;" title="Category folder to apply to selected posts">

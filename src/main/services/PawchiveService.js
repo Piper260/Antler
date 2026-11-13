@@ -117,6 +117,38 @@ function formatPost(post, creatorName = null) {
   };
 }
 
+/**
+ * Every image of a post as its own post: Pawchive posts often hold several
+ * (alternate versions, a sequence). The first keeps the post's own id (and
+ * so the file name it always had); the rest are <id>_2, <id>_3 ...
+ */
+function formatPostImages(post, creatorName = null) {
+  const base = formatPost(post, creatorName);
+  if (!base) return [];
+  const images = postImages(post);
+  return images.map((image, i) => imagePost(base, image, i, images.length));
+}
+
+/** One image of a formatted post as a post of its own (see formatPostImages). */
+function imagePost(base, image, index, count) {
+  const id = index === 0 ? base.id : `${base.id}_${index + 1}`;
+  const fileType = extOf(image.path) || base.metadata.fileType;
+  const original = fileUrl(image);
+  return {
+    ...base,
+    id,
+    metadata: {
+      ...base.metadata,
+      id,
+      fileType,
+      description: count > 1 ? `${base.metadata.description || 'Untitled'} (${index + 1} of ${count})` : base.metadata.description,
+      pageCount: count
+    },
+    fileUrls: { original, sample: thumbUrl(image), preview: thumbUrl(image), alternatives: {} },
+    downloadInfo: { isDownloadable: true, bestUrl: { url: original, type: 'original', size: 0 }, filename: `${id}.${fileType}` }
+  };
+}
+
 /** How closely a creator name matches a search name; 0 = not at all. */
 function nameScore(creatorName, query) {
   const norm = (s) => String(s || '').toLowerCase().replace(/[_\s\-.]+/g, '');
@@ -229,7 +261,8 @@ class PawchiveService {
       raw = Array.isArray(list) ? list : [];
     }
     return {
-      posts: raw.map(p => formatPost(p, creator?.name)).filter(Boolean),
+      // Every image of a post is its own result, not just the first.
+      posts: raw.flatMap(p => formatPostImages(p, creator?.name)),
       pagination: { currentPage, hasMore: raw.length === PAGE_SIZE, totalCount: null },
       creator
     };
@@ -250,4 +283,4 @@ function failure(message, type, status) {
 }
 
 module.exports = PawchiveService;
-Object.assign(module.exports, { formatPost, parseTags, postImages, fileHash, fileUrl, thumbUrl, nameScore, PAGE_SIZE });
+Object.assign(module.exports, { formatPost, formatPostImages, imagePost, parseTags, postImages, fileHash, fileUrl, thumbUrl, nameScore, PAGE_SIZE });

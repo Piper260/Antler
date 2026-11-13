@@ -101,7 +101,8 @@ describe('PawchiveService.search', () => {
     const result = await service.search('artist', 'Mingrix', { page: 2, additionalTags: ['black_apron'] });
     // Refine words search titles and text (q): few Pawchive posts are tagged.
     expect(calls[1]).toEqual(['/patreon/user/2', { q: 'black apron', o: 50 }]);
-    expect(result.posts).toHaveLength(PAGE_SIZE);
+    // Each test post has two images, and every image is its own result.
+    expect(result.posts).toHaveLength(PAGE_SIZE * 2);
     expect(result.pagination).toEqual({ currentPage: 2, hasMore: true, totalCount: null });
     await expect(service.search('artist', 'Mingrix', { additionalTags: ['xy'] })).rejects.toThrow('3 letters');
     expect(result.creator.name).toBe('mingrix');

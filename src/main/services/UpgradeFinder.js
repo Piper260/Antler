@@ -22,7 +22,7 @@ const fs = require('fs');
 const path = require('path');
 const { writeFileSafe } = require('../utils/safeWrite');
 const match = require('./imageMatch');
-const { postImages, fileHash, fileUrl, thumbUrl, formatPost, PAGE_SIZE } = require('./PawchiveService');
+const { postImages, fileHash, fileUrl, thumbUrl, formatPost, imagePost, PAGE_SIZE } = require('./PawchiveService');
 
 const DEFAULT_PAGES = 10;    // newest 500 Pawchive posts
 const MAX_PAGES = 40;
@@ -74,37 +74,54 @@ function pairUp(originals, candidates, decisions = {}) {
   return pairs;
 }
 
+// Pawchive copies of one picture (reposted in two tiers) are this close or closer.
+const SAME_PICTURE = 2;
+
 /**
- * Pawchive images that match none of the e621 fingerprints, each image once
- * (one posted in two tiers is the same picture). Pure: fingerprints only.
+ * Pawchive images that aren't on e621, each picture once. Pure: fingerprints only.
+ *
+ * Each e621 post claims the one Pawchive image closest to it (within
+ * match.LOOSE): that image is the e621 picture, whatever its thumbnail's
+ * compression did to the fingerprint (often 5-10 bits on wide images). The
+ * other images of a multi-image post (alternate versions, small edits) look
+ * like the same e621 post but aren't its closest, so they stay unclaimed and
+ * are listed. Unclaimed near-exact copies of a claimed or listed image
+ * (SAME_PICTURE) are the same picture posted again, and are left out.
  * @param candidates [{ hash, fingerprint }]
  * @param prints     e621 fingerprints
- * @returns candidates not within match.LOOSE of any e621 print
  */
 function notOnE621(candidates, prints) {
+  const claimed = new Set();
+  for (const p of prints) {
+    let best = null;
+    for (const c of candidates) {
+      const d = match.hamming(c.fingerprint, p);
+      if (d <= match.LOOSE && (!best || d < best.d)) best = { c, d };
+    }
+    if (best) claimed.add(best.c);
+  }
+  const kept = [...claimed];
   const missing = [];
   for (const c of candidates) {
-    if (prints.some(p => match.hamming(c.fingerprint, p) <= match.LOOSE)) continue;
-    if (missing.some(m => match.hamming(c.fingerprint, m.fingerprint) <= match.DEFAULT_SURE)) continue;
+    if (claimed.has(c)) continue;
+    if (kept.some(k => match.hamming(c.fingerprint, k.fingerprint) <= SAME_PICTURE)) continue;
     missing.push(c);
+    kept.push(c);
   }
   return missing;
 }
 
-/** A Pawchive image as a post the search grid can show and download. */
+/**
+ * A Pawchive image as a post the search grid can show and download, named
+ * as the Pawchive search names it (<post id>, then <post id>_2 ...), so a
+ * file downloaded either way is recognised by the other.
+ */
 function postForImage(candidate, creatorName) {
-  const post = formatPost(candidate.raw, creatorName);
-  if (!post) return null;
-  const id = `${post.id}_${candidate.hash.slice(0, 8)}`;
-  const fileType = extOfUrl(candidate.url) || post.metadata.fileType;
-  return {
-    ...post,
-    id,
-    onlyOnPawchive: true,
-    metadata: { ...post.metadata, id, fileType },
-    fileUrls: { original: candidate.url, sample: candidate.thumb, preview: candidate.thumb, alternatives: {} },
-    downloadInfo: { isDownloadable: true, bestUrl: { url: candidate.url, type: 'original', size: 0 }, filename: `${id}.${fileType}` }
-  };
+  const base = formatPost(candidate.raw, creatorName);
+  if (!base) return null;
+  const images = postImages(candidate.raw);
+  const index = Math.max(0, images.findIndex(f => fileHash(f) === candidate.hash));
+  return { ...imagePost(base, images[index], index, images.length), onlyOnPawchive: true };
 }
 
 class UpgradeFinder {

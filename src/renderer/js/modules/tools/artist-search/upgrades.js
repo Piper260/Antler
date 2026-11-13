@@ -101,8 +101,14 @@ async findUpgrades() {
     const counts = this.upgradeCounts();
     const missing = (result.missing || []).length;
     process?.finish({ message: `${counts.upgrade} upgrades, ${counts.ask} to review, ${missing} only on Pawchive` });
-    if (counts.ask) this.showToast(`${counts.ask} possible ${counts.ask === 1 ? 'match needs' : 'matches need'} a look - press Review`, 'info');
-    else this.showToast(`Pulled from Pawchive: ${counts.upgrade} larger ${counts.upgrade === 1 ? 'copy' : 'copies'}${missing ? `, ${missing} new ${missing === 1 ? 'image' : 'images'} mixed into the results` : ''}`, counts.upgrade || missing ? 'success' : 'info');
+    // Always say what came in, and where to look for it.
+    const where = this.searchFilters?.sortBy === 'id' ? 'by date' : this.searchFilters?.sortBy === 'training' ? 'ranked for training' : 'at the end';
+    const said = [
+      missing ? `${missing} new ${missing === 1 ? 'image' : 'images'} added ${where}` : 'no new images',
+      `${counts.upgrade} larger ${counts.upgrade === 1 ? 'copy' : 'copies'}`,
+      counts.ask ? `${counts.ask} to review (press Review)` : ''
+    ].filter(Boolean).join(', ');
+    this.showToast(`Pulled from Pawchive: ${said}`, missing || counts.upgrade ? 'success' : 'info');
   } catch (error) {
     console.error('❌ Upgrade search failed:', error);
     process?.finish({ message: 'Failed', failed: true });

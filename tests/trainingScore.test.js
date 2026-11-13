@@ -16,6 +16,21 @@ describe('scorePost', () => {
     expect(result.reasons).toEqual([]);
   });
 
+  test('a Pawchive post is not marked down for the size, tags and rating Pawchive lacks', () => {
+    const pawchive = { ...post({ w: 0, h: 0, tags: { general: [] } }), source: 'pawchive' };
+    const result = scorePost(pawchive);
+    expect(result.score).toBe(BASE + 8); // half the community points, nothing taken off
+    // An e621 post with the same missing tags is marked down for them.
+    expect(scorePost(post({ w: 0, h: 0, tags: { general: [] } })).score).toBeLessThan(result.score);
+  });
+
+  test('ranked together, a Pawchive post sits among e621 posts, not below them all', () => {
+    const e621 = [1, 2, 3, 4].map(id => post({ id, score: id * 10, favs: id * 20, w: 900, h: 900 }));
+    const pawchive = { ...post({ id: 'pc', w: 0, h: 0, tags: { general: [] } }), source: 'pawchive' };
+    const order = rankPosts([...e621, pawchive]).map(p => p.id);
+    expect(order.indexOf('pc')).toBeLessThan(order.length - 1);
+  });
+
   test('videos and animations are excluded', () => {
     for (const ext of ['webm', 'mp4', 'swf', 'gif']) {
       const result = scorePost(post({ ext }));

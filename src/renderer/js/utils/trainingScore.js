@@ -99,9 +99,20 @@
     const add = r => { if (r) reasons.push(r); };
     const width = meta.dimensions?.width || 0;
     const height = meta.dimensions?.height || 0;
+    // Pawchive gives no size, score, favourites or (mostly) tags. Missing
+    // isn't bad: such posts aren't marked down for it, so they rank fairly
+    // beside e621 posts instead of sinking to the bottom.
+    const unrated = post.source === 'pawchive';
 
-    add(resolutionPenalty(width, height));
-    add(aspectPenalty(width, height));
+    if (width && height) {
+      add(resolutionPenalty(width, height));
+      add(aspectPenalty(width, height));
+    } else if (unrated) {
+      add({ delta: 0, label: 'size unknown' });
+    } else {
+      add(resolutionPenalty(width, height));
+      add(aspectPenalty(width, height));
+    }
 
     const present = new Set([...(tags.general || []), ...(tags.meta || [])]);
     const tagReasons = [];
@@ -132,12 +143,16 @@
     }
 
     const generalCount = (tags.general || []).length;
-    if (generalCount < 15) add({ delta: -15, label: `few tags (${generalCount})` });
+    if (unrated) {
+      // Tag with Hydra after downloading; the count here says nothing yet.
+    } else if (generalCount < 15) add({ delta: -15, label: `few tags (${generalCount})` });
     else if (generalCount < 25) add({ delta: -7, label: `light tagging (${generalCount})` });
 
     const share = (value, max) => (max > 0 ? Math.log1p(Math.max(0, value)) / Math.log1p(max) : 0);
-    const community = Math.round(COMMUNITY_MAX * (share(meta.score || 0, stats.maxScore) + share(meta.favorites || 0, stats.maxFavs)) / 2);
-    if (community) reasons.push({ delta: community, label: 'community rating' });
+    const community = unrated
+      ? Math.round(COMMUNITY_MAX / 2)
+      : Math.round(COMMUNITY_MAX * (share(meta.score || 0, stats.maxScore) + share(meta.favorites || 0, stats.maxFavs)) / 2);
+    if (community) reasons.push({ delta: community, label: unrated ? 'no rating on Pawchive (counted as average)' : 'community rating' });
 
     const total = BASE + reasons.reduce((sum, r) => sum + r.delta, 0);
     return { score: Math.max(0, Math.min(100, Math.round(total))), excluded: false, reasons };

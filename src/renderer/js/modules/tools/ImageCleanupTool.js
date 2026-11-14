@@ -1,4 +1,5 @@
 import ImageCleanupHealing from './image-cleanup/healing.js';
+import ImageCleanupCrop from './image-cleanup/crop.js';
 
 console.log('🔧 ImageCleanupTool module loading...');
 
@@ -178,6 +179,7 @@ class ImageCleanupTool {
                   <button class="btn btn-sm" data-mode="box" title="Drag a box to mark (X)">Box</button>
                   <button class="btn btn-sm" data-mode="remove" title="Click a marked area to remove all of it (R)">Remove Area</button>
                   <button class="btn btn-sm" data-mode="heal" title="Spot heal: paint over a mark and it's filled in from around it, right here without ComfyUI (H)">Heal</button>
+                  <button class="btn btn-sm" data-mode="crop" title="Crop: drag a box over what to keep, then Apply Crop (K)">Crop</button>
                   <label class="ic-setting" title="Brush size ([ and ])">Size
                     <input type="range" id="ic-brush" min="4" max="200" step="2">
                   </label>
@@ -196,6 +198,8 @@ class ImageCleanupTool {
                   <canvas class="ic-stroke" id="ic-stroke"></canvas>
                   <div class="ic-finds" id="ic-finds"></div>
                   <div class="ic-box-preview" id="ic-box-preview" style="display:none"></div>
+                  <div class="ic-crop-shade" id="ic-crop-shade" style="display:none"></div>
+                  <div class="ic-crop-box" id="ic-crop-box" style="display:none"></div>
                 </div>
               </div>
 
@@ -208,6 +212,7 @@ class ImageCleanupTool {
               </div>
               <div class="ic-tries" id="ic-tries" style="display:none"></div>
               <div class="ic-heal" id="ic-heal" style="display:none"></div>
+              ${this.getCropTemplate()}
             </div>
           </div>
         </div>
@@ -316,6 +321,7 @@ class ImageCleanupTool {
       const button = e.target.closest('[data-mode]');
       if (button) this._setMode(button.dataset.mode);
     });
+    this._cropSetup();
     this._setMode(this.mode);
     this._healSetup();
 
@@ -520,6 +526,7 @@ class ImageCleanupTool {
       await this._loadMask(item);
       if (token !== this.loadToken) return;
       this._healOnShow(item);
+      this._setCropBox?.(null);
       this.tryUrls = item.tries.map(() => null);
       this.view = 'mask';
       this._fit();
@@ -622,6 +629,7 @@ class ImageCleanupTool {
 
     this._renderWorking();
     this._renderHeal();
+    this._cropModeChanged?.(this.mode);
     const tries = this.$('#ic-tries');
     if (!item.tries.length) {
       tries.style.display = 'none';
@@ -690,6 +698,7 @@ class ImageCleanupTool {
     this.mode = mode;
     this.$('#ic-tools').querySelectorAll('[data-mode]').forEach(button => button.classList.toggle('active', button.dataset.mode === mode));
     this.$('#ic-canvas').dataset.mode = mode;
+    this._cropModeChanged?.(mode);
   }
 
   // ---------------------------------------------------------------- drawing
@@ -749,6 +758,10 @@ class ImageCleanupTool {
       if (!this.healBusy) this._healPointerDown(e, p);
       return;
     }
+    if (this.mode === 'crop') {
+      this._cropPointerDown(e, p);
+      return;
+    }
     this.$('#ic-canvas').setPointerCapture(e.pointerId);
     this._snapshot();
     this.drag = { start: p, last: p };
@@ -756,6 +769,10 @@ class ImageCleanupTool {
   }
 
   _pointerMove(e) {
+    if (this.cropDrag) {
+      this._cropPointerMove(this._point(e));
+      return;
+    }
     if (this.healDrag) {
       this._healStrokeTo(this._point(e));
       return;
@@ -781,6 +798,10 @@ class ImageCleanupTool {
     if (this.peeking) {
       this.peeking = false;
       this._renderEditor();
+      return;
+    }
+    if (this.cropDrag) {
+      this._cropPointerUp();
       return;
     }
     if (this.healDrag) {
@@ -1181,7 +1202,13 @@ class ImageCleanupTool {
       e.preventDefault();
       return;
     }
-    const modes = { b: 'bubble', p: 'brush', e: 'erase', x: 'box', r: 'remove', h: 'heal' };
+    if (this.mode === 'crop' && this.view === 'mask' && (key === 'enter' || key === 'escape')) {
+      if (key === 'enter') this._applyCrop();
+      else this._setCropBox(null);
+      e.preventDefault();
+      return;
+    }
+    const modes = { b: 'bubble', p: 'brush', e: 'erase', x: 'box', r: 'remove', h: 'heal', k: 'crop' };
     if (modes[key] && this.view === 'mask') this._setMode(modes[key]);
     else if (key === '[' || key === ']') {
       this.settings.brush = Math.min(200, Math.max(4, this.settings.brush + (key === ']' ? 6 : -6)));
@@ -1212,7 +1239,7 @@ class ImageCleanupTool {
 
 console.log('✅ ImageCleanupTool module loaded');
 
-window.mixMethods(ImageCleanupTool, ImageCleanupHealing);
+window.mixMethods(ImageCleanupTool, ImageCleanupHealing, ImageCleanupCrop);
 
 export default ImageCleanupTool;
 window.ImageCleanupTool = ImageCleanupTool;

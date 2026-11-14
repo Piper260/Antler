@@ -283,6 +283,7 @@ const electronAPI = {
     stop: () => safeInvoke('cleanup:stop'),
     keep: (filePath, tryFile, options) => safeInvoke('cleanup:keep', filePath, tryFile, options),
     discard: (filePath) => safeInvoke('cleanup:discard', filePath),
+    crop: (filePath, box) => safeInvoke('cleanup:crop', filePath, box),
     findSignatures: (filePath) => safeInvoke('cleanup:find-signatures', filePath),
     markRegions: (filePath, regions) => safeInvoke('cleanup:mark-regions', filePath, regions),
     heal: (filePath, area, options) => safeInvoke('cleanup:heal', filePath, area, options),

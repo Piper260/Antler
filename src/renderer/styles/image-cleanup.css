@@ -294,6 +294,34 @@
   outline: 2px solid var(--text-primary);
 }
 
+/* Crop: the box kept, the rest dimmed (the shadow is clipped to the image). */
+.ic-canvas[data-mode="crop"] {
+  overflow: hidden;
+}
+
+.ic-crop-shade {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+
+.ic-crop-box {
+  position: absolute;
+  border: 1px solid #ffffff;
+  outline: 1px solid rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+.ic-crop {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--border-secondary);
+}
+
 .ic-box-preview {
   position: absolute;
   border: 1px solid var(--error);

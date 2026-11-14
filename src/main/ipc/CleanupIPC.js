@@ -192,6 +192,49 @@ class CleanupIPC {
       removeTags: Boolean(options.removeTags)
     }));
 
+    // Crops the image to a box (in shown pixels). The original goes to
+    // bak/cleanup first, as with every other change here; the saved mask is
+    // cropped to match; Flux tries and unsaved healing no longer fit, so they go.
+    handle('cleanup:crop', async (event, filePath, box = {}) => {
+      filePath = requireFile(filePath, IMAGE_EXTENSIONS, 'image');
+      const { width, height } = await this._size(filePath);
+      const left = Math.max(0, Math.min(width - 1, Math.round(Number(box.x) || 0)));
+      const top = Math.max(0, Math.min(height - 1, Math.round(Number(box.y) || 0)));
+      const w = Math.min(width - left, Math.round(Number(box.w) || 0));
+      const h = Math.min(height - top, Math.round(Number(box.h) || 0));
+      if (w < 8 || h < 8) throw new Error('The crop is too small');
+      if (w === width && h === height) return { width, height, unchanged: true };
+
+      const ext = path.extname(filePath).toLowerCase();
+      const cropped = sharp(filePath, { limitInputPixels: false }).rotate().extract({ left, top, width: w, height: h });
+      let encoded;
+      if (ext === '.png') encoded = await cropped.png().toBuffer();
+      else if (ext === '.webp') encoded = await cropped.webp({ lossless: true }).toBuffer();
+      else if (ext === '.jpg' || ext === '.jpeg') encoded = await cropped.jpeg({ quality: 95, chromaSubsampling: '4:4:4' }).toBuffer();
+      else throw new Error(`Can't save ${ext} images; convert to PNG first`);
+
+      const mask = await this._readMask(filePath, width, height);
+      await this.vision.run('heal-discard', { inputPath: filePath });
+      await fs.mkdir(comfy.cleanupDir(filePath), { recursive: true });
+      try {
+        await fs.access(comfy.originalPath(filePath));
+      } catch {
+        await fs.copyFile(filePath, comfy.originalPath(filePath));
+      }
+      await writeFileSafe(filePath, encoded);
+      await comfy.discardTries(filePath);
+
+      let marked = false;
+      if (mask) {
+        const part = new Uint8Array(w * h);
+        for (let y = 0; y < h; y++) part.set(mask.subarray((top + y) * width + left, (top + y) * width + left + w), y * w);
+        marked = part.some(v => v > 127);
+        if (marked) await this._writeMask(filePath, part, w, h);
+        else await fs.rm(comfy.maskPath(filePath), { force: true });
+      }
+      return { width: w, height: h, marked };
+    });
+
     handle('cleanup:discard', async (event, filePath) => {
       await comfy.discardTries(requireFile(filePath, IMAGE_EXTENSIONS, 'image'));
       return {};

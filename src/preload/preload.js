@@ -56,6 +56,7 @@ const electronAPI = {
     minimize: () => safeSend('app:minimize'),
     maximizeRestore: () => safeSend('app:maximize-restore'),
     getInfo: () => safeInvoke('app:get-info'),
+    openLogs: () => safeInvoke('app:open-logs'),
     getCommitHistory: (limit) => safeInvoke('app:get-commit-history', limit)
   },
 

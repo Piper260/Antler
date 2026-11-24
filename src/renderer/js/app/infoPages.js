@@ -266,6 +266,15 @@ setupAboutEventListeners() {
   if (checkUpdatesBtn) {
     checkUpdatesBtn.addEventListener('click', () => this.checkForUpdates());
   }
+
+  // Open the folder holding antler.log
+  const openLogsBtn = document.getElementById('open-logs-btn');
+  if (openLogsBtn) {
+    openLogsBtn.addEventListener('click', async () => {
+      const result = await window.electronAPI?.app?.openLogs?.();
+      if (!result?.success) this.showToast?.(`Could not open the logs: ${result?.message || 'unknown error'}`, 'error');
+    });
+  }
 }
 
 // Show detailed system information

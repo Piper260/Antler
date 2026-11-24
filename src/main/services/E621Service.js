@@ -1,6 +1,14 @@
 // src/main/services/E621Service.js - Enhanced with file URLs for downloads
 
+const fs = require('fs');
+const path = require('path');
 const { formatFileSize } = require('../utils/formatters');
+const e621Format = require('./e621Format');
+
+// Tag categories already looked up (new-format posts carry none), by name;
+// kept in <user data>/e621-tag-categories.json between runs.
+const TAG_CATEGORY_FILE = 'e621-tag-categories.json';
+const MAX_TAG_CATEGORIES = 200000;
 
 class E621Service {
   constructor(settingsService) {
@@ -45,6 +53,11 @@ class E621Service {
     await this.waitForRateLimit();
     
     const credentials = this.getCredentials();
+    // e621 changed its post format on 2026-11-18; v1=true keeps the old one
+    // (for about six months), and anything new is converted (e621Format.js).
+    if (/^\/posts(\.json|\/)/.test(endpoint) && !/[?&]v1=/.test(endpoint)) {
+      endpoint += `${endpoint.includes('?') ? '&' : '?'}v1=true`;
+    }
     const url = `${baseUrl}${endpoint}`;
     
     console.log(`📡 Making E621 API request: ${url}`);
@@ -78,6 +91,7 @@ class E621Service {
         error.status = response.status;
         error.statusText = response.statusText;
         error.details = errorText;
+        console.error(`❌ e621 answered ${response.status} for ${url}: ${String(errorText).slice(0, 500)}`);
         
         // Add specific error types for better handling
         switch (response.status) {
@@ -110,6 +124,12 @@ class E621Service {
       }
 
       const data = await response.json();
+      const newFormat = e621Format.v2PostsIn(data);
+      if (newFormat.length) {
+        console.warn(`⚠️ e621 sent ${newFormat.length} post(s) in its new format; converting`);
+        const categories = await this.tagCategories(e621Format.flatTags(newFormat), baseUrl);
+        return e621Format.responseToV1(data, categories);
+      }
       return data;
 
     } catch (error) {
@@ -122,7 +142,8 @@ class E621Service {
       
             // fetch reports network failures as a TypeError with the cause attached.
       if (error.code === 'ENOTFOUND' || (error.name === 'TypeError' && error.cause)) {
-        const networkError = new Error('Network error');
+        const cause = error.cause?.code || error.cause?.message || error.message;
+        const networkError = new Error(`Network error (${cause})`);
         networkError.type = 'network-error';
         networkError.userMessage = 'Network error. Please check your internet connection.';
         throw networkError;
@@ -131,6 +152,56 @@ class E621Service {
       // Re-throw API errors with their metadata intact
       throw error;
     }
+  }
+
+  /**
+   * e621 categories (numbers, see e621Format.CATEGORY_NAMES) for tag names,
+   * from tags.json, 100 names a request; remembered on disk, so each tag is
+   * looked up once. Tags e621 doesn't return count as general.
+   * @returns {Promise<Map<string, number>>}
+   */
+  async tagCategories(names, baseUrl = this.baseUrl) {
+    if (!this.tagCategoryCache) {
+      this.tagCategoryCache = new Map();
+      try {
+        const saved = JSON.parse(fs.readFileSync(this.tagCategoryPath(), 'utf8'));
+        for (const [name, category] of Object.entries(saved)) this.tagCategoryCache.set(name, category);
+      } catch { /* none yet */ }
+    }
+    const cache = this.tagCategoryCache;
+    const missing = [...new Set(names)].filter(name => !cache.has(name));
+    for (let i = 0; i < missing.length; i += 100) {
+      const chunk = missing.slice(i, i + 100);
+      try {
+        const found = await this.makeRequest(`/tags.json?search[name]=${encodeURIComponent(chunk.join(','))}&limit=320`, baseUrl);
+        const list = Array.isArray(found) ? found : found?.tags || [];
+        for (const tag of list) if (tag?.name != null) cache.set(tag.name, Number(tag.category) || 0);
+        for (const name of chunk) if (!cache.has(name)) cache.set(name, 0);
+      } catch (error) {
+        console.warn('⚠️ Could not look tag categories up; those tags count as general for now:', error.message);
+        break;
+      }
+    }
+    if (missing.length) this.saveTagCategories();
+    return cache;
+  }
+
+  tagCategoryPath() {
+    const dir = this.settingsService?.userDataPath || require('os').tmpdir();
+    return path.join(dir, TAG_CATEGORY_FILE);
+  }
+
+  saveTagCategories() {
+    clearTimeout(this.tagCategorySaveTimer);
+    this.tagCategorySaveTimer = setTimeout(() => {
+      try {
+        let entries = [...this.tagCategoryCache.entries()];
+        if (entries.length > MAX_TAG_CATEGORIES) entries = entries.slice(entries.length - MAX_TAG_CATEGORIES);
+        fs.writeFileSync(this.tagCategoryPath(), JSON.stringify(Object.fromEntries(entries)));
+      } catch (error) {
+        console.warn('⚠️ Could not save tag categories:', error.message);
+      }
+    }, 1000);
   }
 
   /**

@@ -225,6 +225,11 @@ class AppPageTemplates {
             <i class="fas fa-info"></i>
             System Info
           </button>
+
+          <button class="btn btn-secondary" id="open-logs-btn" title="The app's log, and F12 for DevTools">
+            <i class="fas fa-file-alt"></i>
+            Open Logs
+          </button>
         </div>
       </div>
 

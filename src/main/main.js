@@ -7,6 +7,11 @@ const path = require('path');
 const { migrateLegacyUserData } = require('./utils/legacyUserData');
 migrateLegacyUserData(app.getPath('appData'), app.getPath('userData'));
 
+// Copy the main process's console to <user data>/logs/antler.log, so an
+// installed copy can be debugged (About > Open Logs).
+const { startLogFile, logDir } = require('./utils/logFile');
+try { startLogFile(app.getPath('userData')); } catch (error) { console.error('Could not start the log file:', error); }
+
 // Import services
 const SettingsService = require('./services/SettingsService');
 const SettingsIPC = require('./ipc/SettingsIPC');
@@ -167,7 +172,18 @@ const createMainWindow = () => {
   if (process.env.NODE_ENV === 'development') {
     mainWindow.webContents.openDevTools();
   }
-  
+
+  // F12 or Ctrl+Shift+I opens DevTools in installed builds too, to see the
+  // renderer's console and network requests when something goes wrong.
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown') return;
+    const key = (input.key || '').toLowerCase();
+    if (key === 'f12' || ((input.control || input.meta) && input.shift && key === 'i')) {
+      event.preventDefault();
+      mainWindow.webContents.toggleDevTools();
+    }
+  });
+
   return mainWindow;
 };
 
@@ -260,6 +276,13 @@ function setupWindowControls() {
       chromeVersion: process.versions.chrome,
       v8Version: process.versions.v8
     };
+  });
+
+  ipcMain.handle('app:open-logs', async () => {
+    const dir = logDir();
+    if (!dir) return { success: false, message: 'Logging is not running' };
+    const failure = await shell.openPath(dir);
+    return failure ? { success: false, message: failure } : { success: true, path: dir };
   });
 
   // Get commit history

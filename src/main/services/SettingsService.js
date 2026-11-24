@@ -450,7 +450,7 @@ async testE621Credentials(username = null, apiKey = null) {
     console.log(`👤 User-Agent: ${userAgent}`);
     
     // Use posts.json instead of posts/1.json for better compatibility
-    const response = await fetch('https://e621.net/posts.json?limit=1', {
+    const response = await fetch('https://e621.net/posts.json?limit=1&v1=true', {
       method: 'GET',
       headers: {
         'User-Agent': userAgent,

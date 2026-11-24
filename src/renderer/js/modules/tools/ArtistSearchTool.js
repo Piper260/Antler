@@ -646,7 +646,14 @@ async searchArtist() {
       
     } else if (result.type !== 'superseded') {
       // (A superseded X search was replaced by a newer one, which reports.)
-      this.showError(result.message, {
+      // Say what actually went wrong (a status code, a network error), not
+      // just the friendly summary, so a failure can be told apart.
+      const cause = result.details?.originalError;
+      const status = result.details?.status;
+      const message = [result.message || 'Search failed',
+        cause && cause !== result.message ? cause : null,
+        status ? `HTTP ${status}` : null].filter(Boolean).join(' - ');
+      this.showError(message, {
         type: result.type,
         details: result.details
       });
@@ -654,7 +661,7 @@ async searchArtist() {
     
   } catch (error) {
     console.error(`❌ Error searching for artist ${artistName}:`, error);
-    this.showError('Failed to search for artist posts', error);
+    this.showError(`Failed to search for artist posts: ${error?.message || error}`, error);
   } finally {
     this.hideLoading();
   }
